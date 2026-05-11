@@ -9,26 +9,30 @@ export default async function handler(req, res) {
     const CONTRACT_ADDRESS = "0xD4c213Fe046fe72Aa456b18B7b4b39A630fE7B17";
 
     try {
-        // Force network detection to stop to avoid the 'bodyJson' crash
+        // --- BYPASSING HANDSHAKE CRASH ---
+        // We define the network manually to stop ethers from asking the RPC for chainId
         const network = ethers.Network.from(8200); 
         const provider = new ethers.JsonRpcProvider(process.env.LIGHTCHAIN_RPC_URL, network, {
             staticNetwork: network
         });
 
         const relayerWallet = new ethers.Wallet(process.env.RELAYER_PRIVATE_KEY, provider);
+        
+        // FIXED: Corrected ABI indices to match your Match struct:
+        // (uint256 wager, uint256 gasRemaining, string FEN, string PGN, uint256 moveCount, uint256 timestamp, bool isActive)
         const contract = new ethers.Contract(CONTRACT_ADDRESS, [
             "function submitMove(address player, string move) external",
-            "function matches(address player) view returns (uint256, address, string, string, uint256, uint256, bool)"
+            "function matches(address player) view returns (uint256, uint256, string, string, uint256, uint256, bool)"
         ], relayerWallet);
 
         // 1. Fetch Game State
         const gameData = await contract.matches(playerAddress);
-        if (!gameData || !gameData[6]) { // isActive is index 6
+        if (!gameData || !gameData[6]) { // isActive is the 7th item (index 6)
             return res.status(400).json({ success: false, error: "No active game found" });
         }
 
         const game = new Chess(gameData[2]); // currentFEN is index 2
-        if (!game.move(move)) throw new Error("Invalid player move");
+        if (!game.move(move)) throw new Error("Invalid player move: " + move);
 
         // 2. AIVM Inference
         const aiResponse = await fetch(process.env.AIVM_ENDPOINT, {
@@ -40,13 +44,12 @@ export default async function handler(req, res) {
             })
         });
 
-        // Use .text() to avoid crashing if the AI returns a raw string
         const rawAiData = await aiResponse.text();
         let aiMoveSAN = rawAiData.trim().replace(/['"]+/g, ''); 
 
         if (!game.move(aiMoveSAN)) throw new Error("AIVM illegal move: " + aiMoveSAN);
 
-        // 3. Submit to Lightchain
+        // 3. Submit AIVM move to the Lightchain contract
         const tx = await contract.submitMove(playerAddress, aiMoveSAN);
         await tx.wait();
 
