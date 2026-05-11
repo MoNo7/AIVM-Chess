@@ -38,6 +38,22 @@ async function connectWallet() {
             // Initialize Contract
             contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
 
+            const gameData = await contract.matches(userAddress);
+            const startTime = Number(gameData[0]); // The timestamp of the match
+            
+            if (startTime > 0) {
+                console.log("Active game found. Resuming...");
+                const currentFEN = gameData[2]; // Struct index 2 is currentFEN
+                
+                // Update local engine
+                game = new Chess(currentFEN);
+                
+                // Update UI
+                gameStatus.innerText = "Resumed active game. Your move.";
+                initBoard();
+                board.position(currentFEN);
+            }
+
             // Update UI
             walletDisplay.innerText = `Connected: ${userAddress.slice(0, 6)}...${userAddress.slice(-4)}`;
             connectBtn.style.display = "none";
@@ -96,6 +112,11 @@ async function adminWithdraw() {
 
 // --- 4. Gameplay Logic ---
 async function startMatch() {
+
+    if (game.fen() !== "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1" && !game.game_over()) {
+        if (!confirm("You have an active game. Starting a new one will overwrite it. Proceed?")) return;
+    }
+    
     const betInput = document.getElementById('betAmount').value || "0";
     if (betInput < 0) return alert("Bet cannot be negative.");
     try {
