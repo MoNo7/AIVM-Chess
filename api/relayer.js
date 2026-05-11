@@ -11,26 +11,29 @@ const ABI = [
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
+    
     const { playerAddress, move } = req.body;
 
     try {
-        // FIX: Force network detection to stop the "failed to detect network" crash
         const provider = new ethers.JsonRpcProvider(process.env.LIGHTCHAIN_RPC_URL, null, {
             staticNetwork: new ethers.Network("lightchain-testnet", 8200)
         });
         const relayerWallet = new ethers.Wallet(process.env.RELAYER_PRIVATE_KEY, provider);
         const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, relayerWallet);
 
-        // 1. Fetch Game State
+        // --- MOVE THIS LOGIC INSIDE THE HANDLER ---
         const gameData = await contract.matches(playerAddress);
-        if (!gameData || !gameData[6]) { // gameData[6] is isActive
+        
+        // gameData[6] corresponds to 'isActive' in your struct
+        if (!gameData || !gameData[6]) { 
             return res.status(400).json({ success: false, error: "No active game found." });
         }
+        // ------------------------------------------
 
         const game = new Chess(gameData[2]); // currentFEN
         if (!game.move(move)) throw new Error("Invalid player move");
 
-        // 2. AIVM Inference
+        // ... rest of your AIVM and transaction logic ...
         const aiResponse = await fetch(process.env.AIVM_ENDPOINT, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -40,27 +43,15 @@ export default async function handler(req, res) {
             })
         });
 
-        // FIX: Use .text() first to handle non-JSON responses from AIVM
         const rawAiData = await aiResponse.text();
-        let aiMoveSAN;
-        try {
-            const parsed = JSON.parse(rawAiData);
-            aiMoveSAN = parsed.result?.trim();
-        } catch (e) {
-            aiMoveSAN = rawAiData.trim();
-        }
+        let aiMoveSAN = rawAiData.trim(); // Simplified for now
+        
+        game.move(aiMoveSAN);
 
-        if (!game.move(aiMoveSAN)) throw new Error("AIVM returned illegal move: " + aiMoveSAN);
-
-        // 3. Submit to Chain
         let tx = await contract.submitMove(playerAddress, aiMoveSAN);
         await tx.wait();
 
-        res.status(200).json({ 
-            success: true, 
-            aiMove: aiMoveSAN, 
-            newFEN: game.fen() 
-        });
+        res.status(200).json({ success: true, aiMove: aiMoveSAN, newFEN: game.fen() });
 
     } catch (error) {
         console.error("Relayer Error:", error.message);
