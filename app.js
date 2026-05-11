@@ -31,9 +31,9 @@ async function connectWallet() {
                 selectedInjectedProvider = window.ethereum.providers.find(p => p.isMetaMask) || window.ethereum;
             }
 
-            provider = new ethers.BrowserProvider(selectedInjectedProvider);
-            await provider.send("eth_requestAccounts", []);
+            provider = new ethers.BrowserProvider(window.ethereum);
             signer = await provider.getSigner();
+            await provider.send("eth_requestAccounts", []);
             const userAddress = await signer.getAddress();
             
             // Initialize Contract
@@ -50,6 +50,12 @@ async function connectWallet() {
                 game = new Chess(currentFEN);
                 
                 // Update UI
+                if (walletText) walletText.innerText = `Connected: ${userAddress.slice(0,6)}...`;
+                if (connectBtn) connectBtn.style.display = 'none';
+                if (gameOptions) gameOptions.style.display = 'block';
+        
+                // 4. Resume Check
+                checkActiveGame(userAddress);
                 gameStatus.innerText = "Resumed active game. Your move.";
                 initBoard();
                 board.position(currentFEN);
