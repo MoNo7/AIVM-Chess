@@ -16,8 +16,7 @@
     
     <div id="setup-area">
         <button id="connect-btn" onclick="connectWallet()">Connect Wallet</button>
-        <p id="wallet-address">Not Connected</p>
-        
+        <p id="wallet-address" onclick="toggleAdminMenu()" style="cursor: pointer; color: #aaa;">Not Connected</p>        
         <div id="game-options" style="display: none;">
             <input type="number" id="betAmount" placeholder="Bet Amount (Optional)">
             <button id="start-btn" onclick="startMatch()">Start Match</button>
