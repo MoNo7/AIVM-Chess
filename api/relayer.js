@@ -48,6 +48,8 @@ export default async function handler(req, res) {
             throw new Error(`Invalid move: "${move}" for board state: ${gameData[2]}`);
         }
 
+        const moveSAN = moveResult.san;
+
         // 4. AIVM INFERENCE
         const aiRes = await fetch(process.env.AIVM_ENDPOINT, {
             method: 'POST',
