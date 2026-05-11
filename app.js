@@ -96,8 +96,8 @@ async function adminWithdraw() {
 
 // --- 4. Gameplay Logic ---
 async function startMatch() {
-    const betInput = document.getElementById('betAmount').value;
-    if (!betInput || betInput <= 0) return alert("Enter a valid bet");
+    const betInput = document.getElementById('betAmount').value || "0";
+    if (betInput < 0) return alert("Bet cannot be negative.");
     try {
         const betWei = ethers.parseEther(betInput);
         const gasReserveWei = ethers.parseEther("50.5"); 
