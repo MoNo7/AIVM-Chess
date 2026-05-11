@@ -15,25 +15,27 @@ export default async function handler(req, res) {
     const { playerAddress, move } = req.body;
 
     try {
+        // Force static network to avoid 'failed to detect network' errors
         const provider = new ethers.JsonRpcProvider(process.env.LIGHTCHAIN_RPC_URL, null, {
             staticNetwork: new ethers.Network("lightchain-testnet", 8200)
         });
         const relayerWallet = new ethers.Wallet(process.env.RELAYER_PRIVATE_KEY, provider);
         const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, relayerWallet);
 
-        // --- MOVE THIS LOGIC INSIDE THE HANDLER ---
+        // 1. Fetch Game State
         const gameData = await contract.matches(playerAddress);
         
-        // gameData[6] corresponds to 'isActive' in your struct
+        // Ensure the game is actually active before proceeding
         if (!gameData || !gameData[6]) { 
             return res.status(400).json({ success: false, error: "No active game found." });
         }
-        // ------------------------------------------
 
         const game = new Chess(gameData[2]); // currentFEN
-        if (!game.move(move)) throw new Error("Invalid player move");
+        
+        // Apply player move locally to update FEN for the AI
+        if (!game.move(move)) throw new Error("Invalid player move: " + move);
 
-        // ... rest of your AIVM and transaction logic ...
+        // 2. AIVM Inference
         const aiResponse = await fetch(process.env.AIVM_ENDPOINT, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -44,14 +46,25 @@ export default async function handler(req, res) {
         });
 
         const rawAiData = await aiResponse.text();
-        let aiMoveSAN = rawAiData.trim(); // Simplified for now
-        
-        game.move(aiMoveSAN);
+        let aiMoveSAN;
+        try {
+            const parsed = JSON.parse(rawAiData);
+            aiMoveSAN = parsed.result?.trim();
+        } catch (e) {
+            aiMoveSAN = rawAiData.trim();
+        }
 
-        let tx = await contract.submitMove(playerAddress, aiMoveSAN);
+        if (!game.move(aiMoveSAN)) throw new Error("AIVM returned illegal move: " + aiMoveSAN);
+
+        // 3. Submit AIVM move to the Lightchain contract
+        const tx = await contract.submitMove(playerAddress, aiMoveSAN);
         await tx.wait();
 
-        res.status(200).json({ success: true, aiMove: aiMoveSAN, newFEN: game.fen() });
+        res.status(200).json({ 
+            success: true, 
+            aiMove: aiMoveSAN, 
+            newFEN: game.fen() 
+        });
 
     } catch (error) {
         console.error("Relayer Error:", error.message);
