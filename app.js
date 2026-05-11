@@ -100,7 +100,7 @@ async function startMatch() {
     if (betInput < 0) return alert("Bet cannot be negative.");
     try {
         const betWei = ethers.parseEther(betInput);
-        const gasReserveWei = ethers.parseEther("50.5"); 
+        const gasReserveWei = ethers.parseEther("51"); 
         const totalValue = betWei + gasReserveWei;
         gameStatus.innerText = "Confirming Transaction...";
         
