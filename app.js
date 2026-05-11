@@ -89,10 +89,17 @@ async function checkOwnerStatus() {
 
 // --- 3. Vault & Revenue ---
 async function refreshVaultStats() {
-    const balanceWei = await provider.getBalance(CONTRACT_ADDRESS);
-    const lockedWei = await contract.lockedVaultFunds();
-    const available = ethers.formatEther(balanceWei - lockedWei);
-    document.getElementById('vault-available').innerText = available;
+    try{
+        const totalBalanceWei = await provider.getBalance(CONTRACT_ADDRESS);
+        const balanceWei = await provider.getBalance(CONTRACT_ADDRESS);
+        const lockedWei = await contract.lockedVaultFunds();
+        const availableWei = totalBalanceWei - lockedWei;
+        const availableLCAI = ethers.formatEther(availableWei);
+        document.getElementById('vault-available').innerText = available;
+        console.log("Vault Refresh: Total:", ethers.formatEther(totalBalanceWei), "Locked:", ethers.formatEther(lockedWei));
+    } catch (e) {
+        console.error("Vault Refresh Error:", e);
+    }
 }
 
 async function updateVaultDisplay() {
