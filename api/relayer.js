@@ -41,28 +41,35 @@ export default async function handler(req, res) {
 
         //const game = new Chess(gameData[2]);
         const game = new Chess(gameData.currentFEN);
+        console.log("Current FEN from Contract:", gameData.currentFEN);
+        console.log("Move received from UI:", move);
 
-        // If move is a string like "h2h3", split it for the library
-        let move;
+
+        // Clean up the move input
+        let finalizedMove;
         if (typeof move === 'string' && move.length === 4) {
-            move = {
-                from: (move.from || move.From || move.source).toLowerCase(),
-                to: (move.to || move.To || move.target).toLowerCase(),
+            finalizedMove = {
+                from: move.substring(0, 2).toLowerCase(),
+                to: move.substring(2, 4).toLowerCase(),
+                promotion: 'q'
+            };
+        } else if (typeof move === 'object') {
+            finalizedMove = {
+                from: (move.from || move.source).toLowerCase(),
+                to: (move.to || move.target).toLowerCase(),
                 promotion: 'q'
             };
         } else {
-            move = move;
+            finalizedMove = move;
         }
 
         
-        console.log("Current FEN from Contract:", gameData[2]);
-        console.log("Move received from UI:", move);
         
         const moveResult = game.move(move); 
 
         if (!moveResult) {
-            console.error("Validation Failed. FEN:", gameData.currentFEN, "Move Attempted:", moveObj);
-            throw new Error(`Invalid move: ${JSON.stringify(moveObj)}`);
+            console.error("Validation Failed. FEN:", gameData.currentFEN, "Move Attempted:", finalizedMove);
+            throw new Error(`Invalid move: ${JSON.stringify(finalizedMove)}`);
         }
         
         const moveSAN = moveResult.san;
