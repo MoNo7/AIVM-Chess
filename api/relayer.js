@@ -39,15 +39,32 @@ export default async function handler(req, res) {
         const gameData = await contract.matches(playerAddress);
         if (!gameData || !gameData[6]) return res.status(400).json({ error: "No active game." });
 
-        const game = new Chess(gameData[2]);
+        //const game = new Chess(gameData[2]);
+        const game = new Chess(gameData.currentFEN);
+
+        // If move is a string like "h2h3", split it for the library
+        let moveObj;
+        if (typeof move === 'string' && move.length === 4) {
+            moveObj = {
+                from: move.substring(0, 2),
+                to: move.substring(2, 4),
+                promotion: 'q' // Default for stability
+            };
+        } else {
+            moveObj = move;
+        }
+
+        
         console.log("Current FEN from Contract:", gameData[2]);
         console.log("Move received from UI:", move);
         
-        const moveResult = game.move(move);
-        if (!moveResult) {
-            throw new Error(`Invalid move: "${move}" for board state: ${gameData[2]}`);
-        }
+        const moveResult = game.move(moveObj); 
 
+        if (!moveResult) {
+            console.error("Validation Failed. FEN:", gameData.currentFEN, "Move Attempted:", moveObj);
+            throw new Error(`Invalid move: ${JSON.stringify(moveObj)}`);
+        }
+        
         const moveSAN = moveResult.san;
 
         // 4. AIVM INFERENCE
