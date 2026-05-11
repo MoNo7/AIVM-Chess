@@ -28,30 +28,20 @@ async function connectWallet() {
     const gameOptions = document.getElementById('game-options');
 
     try {
-        if (!window.ethereum) return alert("Please install MetaMask");
-        
-        provider = new ethers.BrowserProvider(window.ethereum);
-        signer = await provider.getSigner();
-        contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-        
-        const userAddress = await signer.getAddress();
-        const ownerAddress = await contract.protocolOwner();
-        
-        // If the connected user is the owner, show the admin menu
-        if (userAddress.toLowerCase() === ownerAddress.toLowerCase()) {
-            document.getElementById('admin-menu').style.display = 'block';
-            updateVaultDisplay();
+        if (window.ethereum) {
+            const providers = new ethers.BrowserProvider(window.ethereum);
+            const accounts = await providers.send("eth_requestAccounts", []);
+            userAddress = accounts[0];
+            
+            document.getElementById('wallet-address').innerText = `Connected: ${userAddress.substring(0, 6)}...${userAddress.substring(38)}`;
+            document.getElementById('game-options').style.display = 'block';
+            
+            // Auto-resume check
+            checkActiveGame();
         }
-
-        // 2. NOW USE THEM
-        if (walletText) walletText.innerText = `Connected: ${userAddress.slice(0,6)}...`;
-        if (connectBtn) connectBtn.style.display = 'none';
-        if (gameOptions) gameOptions.style.display = 'block';
-
-        checkActiveGame(userAddress);
     } catch (error) {
-        console.error("Connection Failed:", error);
-    }
+            console.error("Connection Failed:", error);
+        }
 }
 
 async function checkOwnerStatus() {
@@ -104,6 +94,13 @@ async function checkVaultLiquidity(userBet) {
     } else {
         warningElement.innerText = "";
         document.getElementById('start-btn').disabled = false;
+    }
+}
+
+function toggleAdminMenu() {
+    if (userAddress.toLowerCase() === OWNER_ADDRESS.toLowerCase()) {
+        const adminMenu = document.getElementById('admin-menu');
+        adminMenu.style.display = (adminMenu.style.display === 'none') ? 'block' : 'none';
     }
 }
 
@@ -169,12 +166,18 @@ async function startMatch() {
 }
 
 async function checkActiveGame(userAddress) {
+    // 1. Fetch the FEN from your AIVMChessReferee contract
+    // const matchData = await contract.matches(userAddress);
+    // const currentFEN = matchData.currentFEN;
     if (!contract) return; // Safety check
     // Ensure 'matches' is in your CONTRACT_ABI
     try {
         const gameData = await contract.matches(userAddress);
         if (gameData && gameData.isActive) {
-            resumeGame(gameData);
+            
+            if (currentFEN && currentFEN !== "") {
+                resumeGame(currentFEN);
+            }
             // Hide setup, show board
             document.getElementById('setup-area').style.display = 'none';
             document.getElementById('board-container').style.display = 'block';
@@ -190,6 +193,24 @@ async function checkActiveGame(userAddress) {
         console.error("No active game found:", e);
     }
 }
+
+function resumeGame(fen) {
+    // Show the board container
+    document.getElementById('board-container').style.display = 'block';
+    
+    // Initialize or Update Board
+    if (!board) {
+        board = Chessboard('myBoard', {
+            draggable: true,
+            position: fen,
+            onDrop: handleMove // Your existing move logic
+        });
+    } else {
+        board.position(fen);
+    }
+    game.load(fen);
+}
+
 
 function initBoard() {
     const config = {
