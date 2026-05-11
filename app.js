@@ -31,16 +31,16 @@ async function connectWallet() {
             userAddress = accounts[0];
             const signer = await provider.getSigner();
             
-            // Initialize contract instance so checkActiveGame can use it
             contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-
-            document.getElementById('wallet-address').innerText = 
-                `Connected: ${userAddress.substring(0, 6)}...${userAddress.substring(38)}`;
+            
+            // Restore visibility
+            const display = document.getElementById('wallet-address');
+            display.innerText = `Connected: ${userAddress.substring(0, 6)}...${userAddress.substring(38)}`;
             
             document.getElementById('game-options').style.display = 'block';
-
-            // IMPORTANT: Pass userAddress to the resume check
-            checkActiveGame(userAddress); 
+            
+            checkActiveGame(userAddress);
+            checkOwnerStatus(); // <--- CRITICAL: This enables the admin toggle
         }
     } catch (error) {
         console.error("Connection Failed:", error);
@@ -331,6 +331,14 @@ async function requestAIVMMove() {
     }
 }
 
+function resetGame() {
+    if (confirm("Reset the local board? This won't cancel an on-chain match.")) {
+        game = new Chess();
+        if (board) board.start();
+        document.getElementById('game-status').innerText = "Board Reset. Ready to Start.";
+    }
+}
+
 // --- 5. Event Listeners ---
 //connectBtn.addEventListener('click', connectWallet);
 document.getElementById('adminWithdrawBtn').addEventListener('click', adminWithdraw);
@@ -339,10 +347,12 @@ document.getElementById('adminWithdrawBtn').addEventListener('click', adminWithd
 // --- 3. Fix the Event Listeners at the bottom of app.js ---
 window.onload = () => {
     const startBtn = document.getElementById('start-btn');
-    const withdrawBtn = document.getElementById('adminWithdrawBtn');
+    const resetBtn = document.getElementById('reset-btn'); // New
     const connectBtn = document.getElementById('connect-btn');
+    const withdrawBtn = document.getElementById('adminWithdrawBtn');
 
     if (startBtn) startBtn.addEventListener('click', startMatch);
-    if (withdrawBtn) withdrawBtn.addEventListener('click', adminWithdraw);
+    if (resetBtn) resetBtn.addEventListener('click', resetGame); // New
     if (connectBtn) connectBtn.addEventListener('click', connectWallet);
+    if (withdrawBtn) withdrawBtn.addEventListener('click', adminWithdraw);
 };
