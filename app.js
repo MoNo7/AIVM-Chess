@@ -33,6 +33,15 @@ async function connectWallet() {
         provider = new ethers.BrowserProvider(window.ethereum);
         signer = await provider.getSigner();
         const userAddress = await signer.getAddress();
+        
+        // Fetch the owner from the contract
+        const ownerAddress = await contract.protocolOwner();
+        
+        // If the connected user is the owner, show the admin menu
+        if (userAddress.toLowerCase() === ownerAddress.toLowerCase()) {
+            document.getElementById('admin-menu').style.display = 'block';
+            updateVaultDisplay();
+        }
 
         // 2. NOW USE THEM
         if (walletText) walletText.innerText = `Connected: ${userAddress.slice(0,6)}...`;
@@ -72,6 +81,11 @@ async function refreshVaultStats() {
     const lockedWei = await contract.lockedVaultFunds();
     const available = ethers.formatEther(balanceWei - lockedWei);
     document.getElementById('vault-available').innerText = available;
+}
+
+async function updateVaultDisplay() {
+    const balance = await provider.getBalance(CONTRACT_ADDRESS);
+    document.getElementById('vault-balance').innerText = ethers.formatEther(balance);
 }
 
 async function checkVaultLiquidity(userBet) {
