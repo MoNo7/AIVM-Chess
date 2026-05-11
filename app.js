@@ -36,17 +36,13 @@ async function connectWallet() {
             // Restore visibility
             const walletDisplay = document.getElementById('wallet-address');
             walletDisplay.innerText = `Connected: ${userAddress.substring(0, 6)}...${userAddress.substring(38)}`;
-            walletDisplay.style.color = "#00ffa3"; // Make it look active
+            document.getElementById('connect-btn').style.display = 'none';
             
             // Ensure the click opens the admin panel
             walletDisplay.onclick = () => {
                 const panel = document.getElementById('admin-panel');
-                if (panel.style.display === 'none') {
-                    panel.style.display = 'block';
-                    updateVaultDisplay(); // Refresh the LCAI balance
-                } else {
-                    panel.style.display = 'none';
-                }
+                panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+                if (panel.style.display === 'block') updateVaultDisplay();
             };
             
             document.getElementById('game-options').style.display = 'block';
