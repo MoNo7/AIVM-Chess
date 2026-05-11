@@ -26,7 +26,17 @@
             <p id="game-status">Awaiting Game Start...</p>
         </div>
 
-        <div id="myBoard" style="width: 400px; margin: 20px auto;"></div>
+        <div id="setup-area">
+            <button id="connect-btn" onclick="connectWallet()">Connect Wallet</button>
+            <p id="wallet-address"></p>
+            
+            <input type="number" id="betAmount" placeholder="Bet Amount (Optional)" min="0">
+            <p id="bet-warning" style="color: red;"></p>
+            
+            <button id="start-btn" onclick="startMatch()">Start Match</button>
+        </div>
+        
+        <div id="myBoard" style="width: 400px;"></div>
 
         <div id="admin-panel" style="display: none; border: 2px solid #ffd700; padding: 20px; margin-top: 20px;">
             <h2 style="color: #ffd700;">Admin Master Menu</h2>
