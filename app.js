@@ -206,3 +206,10 @@ async function onDrop(source, target) {
 connectBtn.addEventListener('click', connectWallet);
 document.getElementById('adminWithdrawBtn').addEventListener('click', adminWithdraw);
 document.getElementById('startGameBtn').addEventListener('click', startMatch);
+document.addEventListener('DOMContentLoaded', () => {
+    const startBtn = document.getElementById('start-btn');
+    if (startBtn) {
+        // Only adds the listener if the button actually exists
+        startBtn.addEventListener('click', startMatch);
+    }
+});
