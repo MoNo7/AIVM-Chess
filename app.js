@@ -36,8 +36,10 @@ async function connectWallet() {
             // Restore visibility
             const walletDisplay = document.getElementById('wallet-address');
             walletDisplay.innerText = `Connected: ${userAddress.substring(0, 6)}...${userAddress.substring(38)}`;
+            // Ensure these IDs match your HTML exactly
             document.getElementById('connect-btn').style.display = 'none';
             document.getElementById('game-controls').style.display = 'block';
+            document.getElementById('board-container').style.display = 'block'; // Shows the board
             
             // Ensure the click opens the admin panel
             walletDisplay.onclick = () => {
