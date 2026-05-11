@@ -62,6 +62,7 @@ async function connectWallet() {
 
             checkOwnerStatus();
             document.getElementById('wallet-address').innerText = `Connected: ${userAddress.slice(0,6)}...`;
+            document.getElementById('setup-area').style.display = 'none';
             document.getElementById('connect-btn').style.display = 'none'; // Hide first connect button
             document.getElementById('game-options').style.display = 'block'; // Show bet/start
         } catch (error) {
