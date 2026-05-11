@@ -194,6 +194,24 @@ async function startMatch() {
     } catch (error) { alert("Failed to start match."); }
 }
 
+async function checkActiveGame(userAddress) {
+    // Ensure 'matches' is in your CONTRACT_ABI
+    const gameData = await contract.matches(userAddress);
+    
+    if (gameData.isActive) {
+        // Hide setup, show board
+        document.getElementById('setup-area').style.display = 'none';
+        document.getElementById('board-container').style.display = 'block';
+        
+        // Load the saved FEN
+        game = new Chess(gameData.currentFEN);
+        initBoard();
+        board.position(gameData.currentFEN);
+        
+        document.getElementById('gameStatus').innerText = "Game Resumed!";
+    }
+}
+
 function initBoard() {
     const config = {
         draggable: true,
