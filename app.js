@@ -256,7 +256,10 @@ async function onDrop(source, target) {
             const response = await fetch('/api/relayer', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ playerAddress: userAddress, move: move.san })
+                body: JSON.stringify({ 
+                    playerAddress: userAddress, 
+                    move: move.san // <--- Use .san here
+                })
             });
             
             // Check if response is actually JSON
