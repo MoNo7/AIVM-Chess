@@ -23,14 +23,18 @@
         </div>
     </div>
 
-    <div id="admin-menu" style="display: none; background: #2a2a2a; padding: 15px; border-radius: 8px; margin-top: 10px;">
+    <div id="admin-menu" style="display: none; border: 1px solid red; padding: 10px;">
         <h3>Admin Dashboard</h3>
         <p>Vault Balance: <span id="vault-balance">0</span> LCAI</p>
         <button onclick="updateVaultDisplay()">Refresh Balance</button>
+        <input type="number" id="withdraw-amount" placeholder="LCAI Amount">
+        <button id="adminWithdrawBtn">Withdraw Revenue</button>
     </div>
 
     <div id="board-container" style="display: none;">
-        <div id="myBoard" style="width: 400px; margin: 0 auto;"></div>
+        <h2 id="game-title">Game in Progress</h2>
+        <div id="myBoard" style="width: 400px; margin: auto;"></div>
+        <p id="game-status"></p>
     </div>
 </div>
 
