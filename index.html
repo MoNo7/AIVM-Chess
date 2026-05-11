@@ -15,8 +15,6 @@
         <h1>Play the AIVM Grandmaster</h1>
         <p>Bet LCAI. Beat the AI. Double your money.</p>
 
-
-
         <div id="game-controls" style="display: none;">
             <button id="startGameBtn">Start Game (55 LCAI + Bet)</button>
             <input type="number" id="betAmount" placeholder="Bet Amount (Optional)" min="0" max="10000">
@@ -24,21 +22,17 @@
         </div>
 
         <div id="setup-area">
-
-            <div id="wallet-section">
-                <button id="connectWalletBtn">Connect Wallet</button>
-                <p id="wallet-address">Not Connected</p>
-            </div>
-
+            <button id="connect-btn" onclick="connectWallet()">Connect Wallet</button>
+            <p id="wallet-address">Not Connected</p>
+            
             <div id="game-options" style="display: none;">
+                <input type="number" id="betAmount" placeholder="Bet Amount (Optional)">
                 <button id="start-btn" onclick="startMatch()">Start Match</button>
-                <input type="number" id="betAmount" placeholder="Bet Amount (Optional)" min="0">
-                <p id="bet-warning" style="color: red;"></p>
             </div>
         </div>
+    
         <div id="board-container" style="display: none;">
-            <div id="myBoard" style="width: 100%;"></div>
-            <p id="gameStatus" class="status-text"></p>
+            <div id="myBoard" style="width: 400px;"></div>
         </div>
             
         <div id="admin-panel" style="display: none; border: 2px solid #ffd700; padding: 20px; margin-top: 20px;">
