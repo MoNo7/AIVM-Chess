@@ -89,7 +89,8 @@ export default async function handler(req, res) {
         if (!game.move(aiMove)) throw new Error("AIVM returned illegal move: " + aiMove);
 
         // 5. SUBMIT TO CHAIN
-        const tx = await contract.submitMove(playerAddress, aiMove);
+        //const tx = await contract.submitMove(playerAddress, aiMove);
+        const tx = await contract.submitMove(playerAddress, game.fen());
         const receipt = await tx.wait();
 
         res.status(200).json({ success: true, aiMove, newFEN: game.fen(), txHash: receipt.hash });
