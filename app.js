@@ -99,6 +99,25 @@ async function refreshVaultStats() {
     document.getElementById('vault-available').innerText = available;
 }
 
+async function checkVaultLiquidity(userBet) {
+    // 1. Get the current contract balance
+    const vaultBalance = await provider.getBalance(CONTRACT_ADDRESS);
+    const vaultLCAI = parseFloat(ethers.formatEther(vaultBalance));
+    
+    // 2. Calculate the required payout (Bet + Gas Reserve)
+    const requiredAmount = parseFloat(userBet) + 55.0;
+
+    const warningElement = document.getElementById('bet-warning');
+    
+    if (requiredAmount > vaultLCAI) {
+        warningElement.innerText = `⚠️ Bet too large. Max allowed: ${(vaultLCAI - 55).toFixed(2)} LCAI`;
+        document.getElementById('start-btn').disabled = true;
+    } else {
+        warningElement.innerText = "";
+        document.getElementById('start-btn').disabled = false;
+    }
+}
+
 async function adminWithdraw() {
     const amountLCAI = document.getElementById('withdraw-amount').value;
     if (!amountLCAI) return alert("Enter an amount");
