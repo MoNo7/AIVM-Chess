@@ -34,7 +34,7 @@ async function connectWallet() {
             provider = new ethers.BrowserProvider(selectedInjectedProvider);
             await provider.send("eth_requestAccounts", []);
             signer = await provider.getSigner();
-            userAddress = await signer.getAddress();
+            const userAddress = await signer.getAddress();
             
             // Initialize Contract
             contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
@@ -61,6 +61,11 @@ async function connectWallet() {
             gameControls.style.display = "block";
 
             checkOwnerStatus();
+            const connectBtn = document.getElementById('connect-btn');
+            const gameOptions = document.getElementById('game-options');
+            
+            if (connectBtn) connectBtn.style.display = 'none';
+            if (gameOptions) gameOptions.style.display = 'block';
             document.getElementById('wallet-address').innerText = `Connected: ${userAddress.slice(0,6)}...`;
             document.getElementById('setup-area').style.display = 'none';
             document.getElementById('connect-btn').style.display = 'none'; // Hide first connect button
