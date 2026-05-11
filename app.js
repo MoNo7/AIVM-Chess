@@ -224,43 +224,60 @@ function initBoard() {
     const config = {
         draggable: true,
         position: 'start',
-        onDragStart: onDragStart, // <--- Enforces turn
-        onDrop: onDrop,           // <--- Handles blockchain sync
+        pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png', 
+        onDragStart: onDragStart,
+        onDrop: onDrop,
         onSnapEnd: onSnapEnd
     };
     board = Chessboard('myBoard', config);
 }
 
 async function onDrop(source, target) {
-    const move = game.move({ from: source, to: target, promotion: 'q' });
+    const move = game.move({
+        from: source,
+        to: target,
+        promotion: 'q'
+    });
+
     if (move === null) return 'snapback';
 
-    // Update UI status
-    document.getElementById('game-status').innerText = "Syncing move to Lightchain...";
-
+    gameStatus.innerText = "Confirming move on Lightchain...";
 
     try {
-        const response = await fetch('/api/relayer', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ playerAddress: userAddress, move: move.san })
-        });
-        const data = await response.json();
-        const tx = await contract.submitMove(move.from + move.to); 
-        await tx.wait(); // Wait for block confirmation
-        document.getElementById('game-status').innerText = "AIVM is thinking...";
-        requestAIVMMove();
-        if (data.success) {
-            game.move(data.aiMove);
-            board.position(game.fen());
-            gameStatus.innerText = data.gameOver ? "Game Over!" : "Your Turn";
-        }
-    } catch (error) { 
+        // 1. Submit to Blockchain FIRST
+        const tx = await contract.submitMove(move.from + move.to);
+        await tx.wait(); 
 
+        gameStatus.innerText = "AIVM is thinking...";
+
+        // 2. Call Relayer (Wrapped in a try/catch so it doesn't break the game)
+        try {
+            const response = await fetch('/api/relayer', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ playerAddress: userAddress, move: move.san })
+            });
+            
+            // Check if response is actually JSON
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    game.move(data.aiMove);
+                    board.position(game.fen());
+                }
+            }
+        } catch (relayerErr) {
+            console.error("Relayer failed, but move is on-chain:", relayerErr);
+        }
+
+        // 3. Fallback to polling the contract for the AIVM move
+        requestAIVMMove();
+
+    } catch (error) {
         console.error("Move failed:", error);
-        game.undo(); // Revert chess.js state if blockchain call fails
+        game.undo();
         board.position(game.fen());
-        document.getElementById('game-status').innerText = "Transaction failed. Try again.";
+        gameStatus.innerText = "Transaction failed. Check your LCAI balance.";
         return 'snapback';
     }
 }
