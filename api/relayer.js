@@ -24,8 +24,11 @@ export default async function handler(req, res) {
         }
 
         // 2. INITIALIZE ETHERS
+        // Inside your handler in relayer.js
         const network = ethers.Network.from(8200);
-        const provider = new ethers.JsonRpcProvider(RPC_URL, network, { staticNetwork: true });
+        const provider = new ethers.JsonRpcProvider(process.env.LIGHTCHAIN_RPC_URL, network, {
+            staticNetwork: true // This stops the provider from "sniffing" the network and crashing
+        });
         const relayerWallet = new ethers.Wallet(process.env.RELAYER_PRIVATE_KEY, provider);
         const contract = new ethers.Contract(CONTRACT_ADDRESS, [
             "function submitMove(address player, string move) external",
