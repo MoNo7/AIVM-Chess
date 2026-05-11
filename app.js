@@ -210,7 +210,7 @@ async function onDrop(source, target) {
 // --- 5. Event Listeners ---
 //connectBtn.addEventListener('click', connectWallet);
 document.getElementById('adminWithdrawBtn').addEventListener('click', adminWithdraw);
-document.getElementById('startGameBtn').addEventListener('click', startMatch);
+//document.getElementById('startGameBtn').addEventListener('click', startMatch);
 //document.addEventListener('DOMContentLoaded', () => {
 window.onload = () => {
     const startBtn = document.getElementById('start-btn');
