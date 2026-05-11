@@ -7,7 +7,7 @@ export default async function handler(req, res) {
     
     const { playerAddress, move } = req.body;
     const RPC_URL = process.env.LIGHTCHAIN_RPC_URL || "https://rpc.testnet.lightchain.ai";
-    const CONTRACT_ADDRESS = "0xD4c213Fe046fe72Aa456b18B7b4b39A630fE7B17";
+    const CONTRACT_ADDRESS = "0xB56aB3b7975c1F544D69392603336FEb27b8A83a";
 
     try {
         // 1. RPC SANITY CHECK: Catch the 502/HTML error before Ethers crashes
@@ -66,9 +66,9 @@ export default async function handler(req, res) {
         
         
         const moveResult = game.move({
-            from: move.from.toLowerCase(),
-            to: move.to.toLowerCase(),
-            promotion: 'q'
+            from: move.from.toLowerCase(), 
+            to: move.to.toLowerCase(), 
+            promotion: 'q' 
         });
 
         if (!moveResult) {
