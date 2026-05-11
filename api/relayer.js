@@ -40,8 +40,8 @@ export default async function handler(req, res) {
         if (!gameData || !gameData[6]) return res.status(400).json({ error: "No active game." });
 
         //const game = new Chess(gameData[2]);
-        const game = new Chess(gameData.currentFEN);
-        console.log("Current FEN from Contract:", gameData.currentFEN);
+        const game = new Chess(gameData[2]);
+        console.log("Current FEN from Contract:", gameData[2]);
         console.log("Move received from UI:", move);
 
 
