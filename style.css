@@ -66,16 +66,32 @@ input {
     box-shadow: 0 4px 15px rgba(0,0,0,0.3);
 }
 
-/* Admin Panel - Gold Accent */
+/* Sleek Admin Panel */
 #admin-panel {
     background: #1a1a1a;
-    border-color: #ffd700 !important;
-    margin-top: 30px;
+    border: 1px solid #444 !important;
+    border-left: 4px solid #ffd700 !important; /* Just a clean gold accent line */
+    border-radius: 8px;
+    margin-top: 20px;
+    text-align: left;
 }
 
 #admin-panel h2 {
-    margin-top: 0;
-    font-size: 1.2rem;
+    color: #ffd700;
+    font-size: 1.1rem;
+    margin-bottom: 15px;
+}
+
+/* The Secret Owner Wallet Toggle */
+.owner-wallet {
+    cursor: pointer;
+    color: #ffd700 !important;
+    transition: all 0.2s ease-in-out;
+}
+
+.owner-wallet:hover {
+    opacity: 0.8;
+    text-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
 }
 
 #toggleAdminBtn {
