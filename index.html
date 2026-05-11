@@ -15,33 +15,26 @@
     <h1>Play the AIVM Grandmaster</h1>
     
     <div id="setup-area">
-       <div id="wallet-section">
-        <span id="wallet-address" style="cursor:pointer; font-weight:bold; display:block; padding:10px; color:#00ffa3;"></span>
-        <button id="connect-btn" class="btn">Connect Wallet</button>
-    </div>
-    
-    <div id="game-controls">
-        <div id="match-setup">
-            <input type="number" id="betAmount" placeholder="Bet Amount (LCAI)" value="0">
-            <button id="start-btn" class="btn" style="display:none;">Start Match</button>
+        <div id="wallet-section">
+            <span id="wallet-address" style="cursor:pointer; font-weight:bold; color:#f1c40f;">Connect Wallet</span>
+            <button id="connect-btn" class="btn">Connect Wallet</button>
         </div>
-        <div id="game-options" style="display:none;">
-            <button id="reset-btn" class="btn btn-secondary">Restore contract game</button>
+        
+        <div id="game-controls" style="display:none;">
+            <input type="number" id="betAmount" placeholder="Bet (LCAI)" value="0">
+            <button id="start-btn" class="btn">Start Match</button>
+            <button id="reset-board-btn" class="btn btn-secondary">Sync Board</button>
         </div>
-    </div>
     </div>
 
-    <div id="admin-panel" style="display:none; border: 2px solid #ff4444; padding: 15px; margin: 20px auto; max-width: 400px; background: #1a1a1a;">
-        <h3 style="color: #ff4444;">Admin Dashboard</h3>
-        <p>Vault Available: <span id="vault-available">0</span> LCAI</p>
-        <div class="admin-actions">
-            <input type="number" id="withdraw-amount" placeholder="LCAI Amount">
-            <button id="adminWithdrawBtn" class="btn">Withdraw Revenue</button>
-        </div>
-        <button onclick="updateVaultDisplay()" class="btn-small">Refresh Balance</button>
+    <div id="admin-panel" style="display:none; border: 1px solid #ff4444; padding: 15px; background:#111;">
+        <h3>Admin Dashboard</h3>
+        <p>Vault: <span id="vault-available">0</span> LCAI</p>
+        <input type="number" id="withdraw-amount" placeholder="LCAI">
+        <button id="adminWithdrawBtn">Withdraw</button>
     </div>
 
-    <div id="board-container" style="display: none;">
+    <div id="board-container" style="display:none;">
         <h2 id="game-title">Game in Progress</h2>
         <div id="myBoard" style="width: 400px; margin: auto;"></div>
         <p id="game-status"></p>
