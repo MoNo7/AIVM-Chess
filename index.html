@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lightchain AIVM Chess</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container">
+        <h1>Play the AIVM Grandmaster</h1>
+        <p>Bet LCAI. Beat the AI. Double your money.</p>
+
+        <div id="wallet-section">
+            <button id="connectWalletBtn">Connect Wallet</button>
+            <p id="wallet-address">Not Connected</p>
+        </div>
+
+        <div id="game-controls" style="display: none;">
+            <input type="number" id="betAmount" placeholder="Bet Amount (LCAI)" min="1" max="10000">
+            <button id="startGameBtn">Start Game (Bet + Gas Deposit)</button>
+            <p id="game-status">Awaiting Game Start...</p>
+        </div>
+
+        <div id="myBoard" style="width: 400px; margin: 20px auto;"></div>
+
+        <div id="admin-panel" style="display: none; border: 2px solid #ffd700; padding: 20px; margin-top: 20px;">
+            <h2 style="color: #ffd700;">Admin Master Menu</h2>
+            <p>Available Vault: <span id="vault-available">0</span> LCAI</p>
+            <input type="number" id="withdraw-amount" placeholder="Amount to withdraw">
+            <button id="adminWithdrawBtn">Withdraw to Owner Wallet</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+    
+    <script src="app.js"></script>
+
+</body>
+</html>
