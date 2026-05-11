@@ -23,6 +23,22 @@
         </div>
     </div>
 
+    <div id="game-options" style="display:none;">
+        <button id="start-btn" class="btn">Start New Match</button>
+        <button id="reset-btn" class="btn btn-secondary">Reset Board</button>
+    </div>
+    
+    <div id="wallet-info">
+        <span id="wallet-address" style="cursor:pointer; font-weight:bold;">Connect Wallet</span>
+    </div>
+    
+    <div id="admin-panel" style="display:none; border: 1px solid red; padding: 10px; margin-top: 20px;">
+        <h3>Admin Dashboard</h3>
+        <p>Vault Available: <span id="vault-available">0</span> LCAI</p>
+        <input type="number" id="withdraw-amount" placeholder="LCAI">
+        <button id="adminWithdrawBtn">Withdraw</button>
+    </div>
+
     <div id="admin-menu" style="display: none; border: 1px solid red; padding: 10px;">
         <h3>Admin Dashboard</h3>
         <p>Vault Balance: <span id="vault-balance">0</span> LCAI</p>
