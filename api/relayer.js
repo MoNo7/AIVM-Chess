@@ -74,6 +74,14 @@ export default async function handler(req, res) {
 
     } catch (error) {
         console.error("Relayer Error:", error.message);
-        res.status(500).json({ success: false, error: error.message });
+        // Check for specific vault error to give better feedback
+        const message = error.message.includes("Vault cannot cover payout") 
+            ? "Contract Vault is empty. Admin must fund the contract." 
+            : error.message;
+    
+        res.status(500).json({ 
+            success: false, 
+            error: message 
+        });
     }
 }
