@@ -53,19 +53,25 @@ async function connectWallet() {
     }
 }
 
-// --- 2. Owner Detection ---
 async function checkOwnerStatus() {
     try {
         const owner = await contract.protocolOwner();
+        
         if (userAddress.toLowerCase() === owner.toLowerCase()) {
-            walletDisplay.innerHTML += ` <br><button id="toggleAdminBtn" style="font-size: 0.8rem; margin-top:5px;">Open Owner Menu</button>`;
-            document.getElementById('toggleAdminBtn').addEventListener('click', () => {
+            // Make the wallet text act as the secret toggle button
+            walletDisplay.classList.add('owner-wallet');
+            walletDisplay.title = "Click to toggle Admin Panel";
+            
+            // Toggle logic on the wallet text itself
+            walletDisplay.addEventListener('click', () => {
                 const isHidden = adminPanel.style.display === "none";
                 adminPanel.style.display = isHidden ? "block" : "none";
                 if (isHidden) refreshVaultStats();
             });
         }
-    } catch (e) { console.error("Error checking owner:", e); }
+    } catch (e) {
+        console.error("Error checking owner:", e);
+    }
 }
 
 // --- 3. Vault & Revenue ---
