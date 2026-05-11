@@ -1,4 +1,5 @@
 // --- Configuration ---
+const OWNER_ADDRESS = "0x4D36B31d4BFB957A5D816B0f420a9e755EFc6a2c";
 const CONTRACT_ADDRESS = "0xD4c213Fe046fe72Aa456b18B7b4b39A630fE7B17";
 const CONTRACT_ABI = [
     "function protocolOwner() view returns (address)",
@@ -22,26 +23,27 @@ const gameControls = document.getElementById('game-controls');
 const gameStatus = document.getElementById('game-status');
 
 async function connectWallet() {
-    // 1. DEFINE VARIABLES FIRST
-    const walletText = document.getElementById('wallet-address');
-    const connectBtn = document.getElementById('connect-btn');
-    const gameOptions = document.getElementById('game-options');
-
     try {
         if (window.ethereum) {
-            const providers = new ethers.BrowserProvider(window.ethereum);
-            const accounts = await providers.send("eth_requestAccounts", []);
+            provider = new ethers.BrowserProvider(window.ethereum);
+            const accounts = await provider.send("eth_requestAccounts", []);
             userAddress = accounts[0];
+            signer = await provider.getSigner();
             
-            document.getElementById('wallet-address').innerText = `Connected: ${userAddress.substring(0, 6)}...${userAddress.substring(38)}`;
+            // Initialize contract instance so checkActiveGame can use it
+            contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+
+            document.getElementById('wallet-address').innerText = 
+                `Connected: ${userAddress.substring(0, 6)}...${userAddress.substring(38)}`;
+            
             document.getElementById('game-options').style.display = 'block';
-            
-            // Auto-resume check
-            checkActiveGame();
+
+            // IMPORTANT: Pass userAddress to the resume check
+            checkActiveGame(userAddress); 
         }
     } catch (error) {
-            console.error("Connection Failed:", error);
-        }
+        console.error("Connection Failed:", error);
+    }
 }
 
 async function checkOwnerStatus() {
@@ -247,11 +249,13 @@ async function onDrop(source, target) {
 document.getElementById('adminWithdrawBtn').addEventListener('click', adminWithdraw);
 //document.getElementById('startGameBtn').addEventListener('click', startMatch);
 //document.addEventListener('DOMContentLoaded', () => {
+// --- 3. Fix the Event Listeners at the bottom of app.js ---
 window.onload = () => {
     const startBtn = document.getElementById('start-btn');
-        if (startBtn) {
-            startBtn.addEventListener('click', startMatch);
-        } else {
-            console.warn("Start button not found in HTML");
-        }
+    const withdrawBtn = document.getElementById('adminWithdrawBtn');
+    const connectBtn = document.getElementById('connect-btn');
+
+    if (startBtn) startBtn.addEventListener('click', startMatch);
+    if (withdrawBtn) withdrawBtn.addEventListener('click', adminWithdraw);
+    if (connectBtn) connectBtn.addEventListener('click', connectWallet);
 };
