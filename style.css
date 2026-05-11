@@ -61,9 +61,16 @@ input {
 
 /* Board Styling */
 #myBoard {
+    margin: 0 auto;
+    transition: width 0.5s ease-in-out; /* Smooth expansion */
     border: 5px solid #333;
     border-radius: 4px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+
+/* Ensure the board stays sharp when resized */
+.chessboard-63f30 {
+    width: 100% !important;
 }
 
 /* Sleek Admin Panel */
