@@ -6,7 +6,7 @@ export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
     
     const { playerAddress, move } = req.body;
-    const RPC_URL = process.env.LIGHTCHAIN_RPC_URL || "https://testnet-rpc.lightchain.ai";
+    const RPC_URL = process.env.LIGHTCHAIN_RPC_URL || "https://rpc.testnet.lightchain.ai";
     const CONTRACT_ADDRESS = "0xD4c213Fe046fe72Aa456b18B7b4b39A630fE7B17";
 
     try {
