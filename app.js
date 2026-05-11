@@ -155,20 +155,25 @@ async function startMatch() {
 }
 
 async function checkActiveGame(userAddress) {
+    if (!contract) return; // Safety check
     // Ensure 'matches' is in your CONTRACT_ABI
-    const gameData = await contract.matches(userAddress);
-    
-    if (gameData.isActive) {
-        // Hide setup, show board
-        document.getElementById('setup-area').style.display = 'none';
-        document.getElementById('board-container').style.display = 'block';
-        
-        // Load the saved FEN
-        game = new Chess(gameData.currentFEN);
-        initBoard();
-        board.position(gameData.currentFEN);
-        
-        document.getElementById('gameStatus').innerText = "Game Resumed!";
+    try {
+        const gameData = await contract.matches(userAddress);
+        if (gameData && gameData.isActive) {
+            resumeGame(gameData);
+            // Hide setup, show board
+            document.getElementById('setup-area').style.display = 'none';
+            document.getElementById('board-container').style.display = 'block';
+            
+            // Load the saved FEN
+            game = new Chess(gameData.currentFEN);
+            initBoard();
+            board.position(gameData.currentFEN);
+            
+            document.getElementById('gameStatus').innerText = "Game Resumed!";
+        }
+    } catch (e) {
+        console.error("No active game found:", e);
     }
 }
 
@@ -207,9 +212,11 @@ async function onDrop(source, target) {
 document.getElementById('adminWithdrawBtn').addEventListener('click', adminWithdraw);
 document.getElementById('startGameBtn').addEventListener('click', startMatch);
 document.addEventListener('DOMContentLoaded', () => {
+window.onload = () => {
     const startBtn = document.getElementById('start-btn');
-    if (startBtn) {
-        // Only adds the listener if the button actually exists
-        startBtn.addEventListener('click', startMatch);
-    }
-});
+        if (startBtn) {
+            startBtn.addEventListener('click', startMatch);
+        } else {
+            console.warn("Start button not found in HTML");
+        }
+    };
