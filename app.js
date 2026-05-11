@@ -37,6 +37,7 @@ async function connectWallet() {
             const walletDisplay = document.getElementById('wallet-address');
             walletDisplay.innerText = `Connected: ${userAddress.substring(0, 6)}...${userAddress.substring(38)}`;
             document.getElementById('connect-btn').style.display = 'none';
+            document.getElementById('game-controls').style.display = 'block';
             
             // Ensure the click opens the admin panel
             walletDisplay.onclick = () => {
@@ -44,11 +45,19 @@ async function connectWallet() {
                 panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
                 if (panel.style.display === 'block') updateVaultDisplay();
             };
+
+            // Add the Admin Toggle
+            const addrLabel = document.getElementById('wallet-address');
+            addrLabel.innerText = `Connected: ${userAddress.slice(0,6)}...${userAddress.slice(-4)}`;
+            addrLabel.onclick = () => {
+                const panel = document.getElementById('admin-panel');
+                panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+            };
             
             document.getElementById('game-options').style.display = 'block';
             
             checkActiveGame(userAddress);
-            checkOwnerStatus(); // <--- CRITICAL: This enables the admin toggle
+            checkOwnerStatus();
         }
     } catch (error) {
         console.error("Connection Failed:", error);
