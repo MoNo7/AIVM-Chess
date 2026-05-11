@@ -65,11 +65,15 @@ export default async function handler(req, res) {
 
         
         
-        const moveResult = game.move(move); 
+        const moveResult = game.move({
+            from: move.from.toLowerCase(),
+            to: move.to.toLowerCase(),
+            promotion: 'q'
+        });
 
         if (!moveResult) {
-            console.error("Validation Failed. FEN:", gameData[2], "Move Attempted:", finalizedMove);
-            throw new Error(`Invalid move: ${JSON.stringify(finalizedMove)}`);
+            console.error("Validation Failed. FEN:", gameData[2], "Move Attempted:", moveResult);
+            throw new Error(`Invalid move: ${JSON.stringify(moveResult)}`);
         }
         
         const moveSAN = moveResult.san;
