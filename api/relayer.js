@@ -11,29 +11,26 @@ const ABI = [
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
-    
     const { playerAddress, move } = req.body;
 
     try {
-        // Force static network to avoid 'failed to detect network' errors
-        const provider = new ethers.JsonRpcProvider(process.env.LIGHTCHAIN_RPC_URL, null, {
-            staticNetwork: new ethers.Network("lightchain-testnet", 8200)
+        // FIXED: Using a more robust provider initialization for Lightchain
+        const network = new ethers.Network("lightchain-testnet", 8200);
+        const provider = new ethers.JsonRpcProvider(process.env.LIGHTCHAIN_RPC_URL, network, {
+            staticNetwork: network
         });
+
         const relayerWallet = new ethers.Wallet(process.env.RELAYER_PRIVATE_KEY, provider);
         const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, relayerWallet);
 
         // 1. Fetch Game State
         const gameData = await contract.matches(playerAddress);
-        
-        // Ensure the game is actually active before proceeding
         if (!gameData || !gameData[6]) { 
             return res.status(400).json({ success: false, error: "No active game found." });
         }
 
-        const game = new Chess(gameData[2]); // currentFEN
-        
-        // Apply player move locally to update FEN for the AI
-        if (!game.move(move)) throw new Error("Invalid player move: " + move);
+        const game = new Chess(gameData[2]); 
+        if (!game.move(move)) throw new Error("Invalid player move");
 
         // 2. AIVM Inference
         const aiResponse = await fetch(process.env.AIVM_ENDPOINT, {
@@ -56,15 +53,11 @@ export default async function handler(req, res) {
 
         if (!game.move(aiMoveSAN)) throw new Error("AIVM returned illegal move: " + aiMoveSAN);
 
-        // 3. Submit AIVM move to the Lightchain contract
+        // 3. Submit to Chain
         const tx = await contract.submitMove(playerAddress, aiMoveSAN);
         await tx.wait();
 
-        res.status(200).json({ 
-            success: true, 
-            aiMove: aiMoveSAN, 
-            newFEN: game.fen() 
-        });
+        res.status(200).json({ success: true, aiMove: aiMoveSAN, newFEN: game.fen() });
 
     } catch (error) {
         console.error("Relayer Error:", error.message);
