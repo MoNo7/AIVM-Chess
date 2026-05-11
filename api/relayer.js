@@ -27,7 +27,9 @@ export default async function handler(req, res) {
 
     try {
         // 1. Setup Provider & Signer
-        const provider = new ethers.JsonRpcProvider(process.env.LIGHTCHAIN_RPC_URL);
+        const provider = new ethers.JsonRpcProvider(process.env.LIGHTCHAIN_RPC_URL, null, {
+            staticNetwork: new ethers.Network("lightchain-testnet", 8200) // Force network ID 8200
+        });
         const relayerWallet = new ethers.Wallet(process.env.RELAYER_PRIVATE_KEY, provider);
         const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, relayerWallet);
 
