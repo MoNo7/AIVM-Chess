@@ -59,13 +59,16 @@ input {
     width: 80%;
 }
 
-/* Board Styling */
+#board-container {
+    margin-top: 20px;
+    z-index: 10;
+    position: relative;
+    min-height: 450px; /* Prevents the container from collapsing */
+}
+
 #myBoard {
-    margin: 0 auto;
-    transition: width 0.5s ease-in-out; /* Smooth expansion */
-    border: 5px solid #333;
-    border-radius: 4px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    border: 3px solid #444;
 }
 
 /* Ensure the board stays sharp when resized */
