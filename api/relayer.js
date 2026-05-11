@@ -9,31 +9,30 @@ export default async function handler(req, res) {
     const CONTRACT_ADDRESS = "0xD4c213Fe046fe72Aa456b18B7b4b39A630fE7B17";
 
     try {
-        // --- HARDENED PROVIDER SETUP ---
+        // --- THE FIX: Hardcode network to stop 'bodyJson' crash ---
         const network = ethers.Network.from(8200); 
         const provider = new ethers.JsonRpcProvider(process.env.LIGHTCHAIN_RPC_URL, network, {
-            staticNetwork: true // Tell Ethers to NEVER probe the network
+            staticNetwork: true // CRITICAL: Stops Ethers from asking the RPC for chainId
         });
 
         const relayerWallet = new ethers.Wallet(process.env.RELAYER_PRIVATE_KEY, provider);
         
-        // Match struct from your Solidity: 
-        // (uint256 wager, uint256 gasRemaining, string currentFEN, string pgn, uint256 moveCount, uint256 lastMoveTimestamp, bool isActive)
+        // Corrected ABI to match your Solidity Match struct
         const contract = new ethers.Contract(CONTRACT_ADDRESS, [
             "function submitMove(address player, string move) external",
             "function matches(address player) view returns (uint256, uint256, string, string, uint256, uint256, bool)"
         ], relayerWallet);
 
-        // 1. Fetch Game State (Catching the RPC crash here)
+        // 1. Fetch Game State
         let gameData;
         try {
             gameData = await contract.matches(playerAddress);
         } catch (rpcErr) {
-            console.error("RPC Connection Error:", rpcErr.message);
-            throw new Error("Could not connect to Lightchain RPC. It might be down or rate-limited.");
+            console.error("RPC Handshake Failed:", rpcErr.message);
+            throw new Error("Lightchain RPC returned an invalid response. Try again in a few seconds.");
         }
 
-        if (!gameData || !gameData[6]) { 
+        if (!gameData || !gameData[6]) { // isActive is index 6
             return res.status(400).json({ success: false, error: "No active game found" });
         }
 
@@ -51,9 +50,8 @@ export default async function handler(req, res) {
         });
 
         const rawAiData = await aiResponse.text();
-        let aiMoveSAN = rawAiData.trim().replace(/['"]+/g, ''); 
+        const aiMoveSAN = rawAiData.trim().replace(/['"]+/g, ''); 
 
-        // Apply AI move locally
         if (!game.move(aiMoveSAN)) throw new Error("AIVM illegal move: " + aiMoveSAN);
 
         // 3. Submit to Chain
