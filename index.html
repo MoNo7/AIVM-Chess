@@ -15,19 +15,20 @@
     <h1>Play the AIVM Grandmaster</h1>
     
     <div id="setup-area">
-        <div id="wallet-section">
-            <span id="wallet-address" style="cursor:pointer; font-weight:bold; display:block; margin-bottom:10px;"><button id="connect-btn" class="btn">Connect Wallet</button></span>
+       <div id="wallet-section">
+        <span id="wallet-address" style="cursor:pointer; font-weight:bold; display:block; padding:10px; color:#00ffa3;"></span>
+        <button id="connect-btn" class="btn">Connect Wallet</button>
+    </div>
+    
+    <div id="game-controls">
+        <div id="match-setup">
+            <input type="number" id="betAmount" placeholder="Bet Amount (LCAI)" value="0">
+            <button id="start-btn" class="btn" style="display:none;">Start Match</button>
         </div>
-        
-        <div id="game-controls">
-            <div id="match-setup">
-                <input type="number" id="betAmount" placeholder="Bet Amount (LCAI)" value="0">
-                <button id="start-btn" class="btn" style="display:none;">Start Match</button>
-            </div>
-            <div id="game-options" style="display:none;">
-                <button id="reset-btn" class="btn btn-secondary">Reset Board</button>
-            </div>
+        <div id="game-options" style="display:none;">
+            <button id="reset-btn" class="btn btn-secondary">Restore contract game</button>
         </div>
+    </div>
     </div>
 
     <div id="admin-panel" style="display:none; border: 2px solid #ff4444; padding: 15px; margin: 20px auto; max-width: 400px; background: #1a1a1a;">
