@@ -13,6 +13,13 @@ const ABI = [
     "function completeMatch(address player, bool playerWon, bool isDraw, uint256 moveCount, string pgn) external"
 ];
 
+// Inside api/relayer.js handler
+const gameData = await contract.matches(playerAddress);
+if (!gameData || !gameData.isActive) {
+    return res.status(400).json({ success: false, error: "No active game found for this address." });
+}
+const currentFEN = gameData.currentFEN || gameData[2];
+
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
 
