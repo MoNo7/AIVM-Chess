@@ -45,17 +45,32 @@ export default async function handler(req, res) {
         if (!playerMove) throw new Error("Invalid move by player");
 
         // 4. Call Lightchain AIVM Inference
-        const aiResponse = await fetch('https://testnet-rpc.lightchain.ai/v1/inference', {
+        const aiResponse = await fetch(process.env.AIVM_ENDPOINT, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                prompt: `You are a Chess Grandmaster playing Black. Current Board (FEN): ${game.fen()}. Provide only the SAN move (e.g., e5, Nf3).`,
+                prompt: `FEN: ${game.fen()}. Move:`,
                 model: "chess-master-v1"
             })
         });
 
+        const rawData = await aiResponse.text();
+        let aiMoveSAN;
+
+        try {
+            const json = JSON.parse(rawData);
+            aiMoveSAN = json.result?.trim();
+        } catch (e) {
+            // If it's not JSON, assume the raw text IS the move
+            aiMoveSAN = rawData.trim();
+        }
+
+        if (!aiMoveSAN || aiMoveSAN.length > 7) {
+            throw new Error("Invalid AIVM response: " + rawData);
+        }
+
         const aiData = await aiResponse.json();
-        const aiMoveSAN = aiData.result?.trim(); // Clean up whitespace
+        //const aiMoveSAN = aiData.result?.trim(); // Clean up whitespace
 
         if (!aiMoveSAN) {
             throw new Error("AIVM failed to return a move");
