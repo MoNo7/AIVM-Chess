@@ -163,7 +163,13 @@ async function startMatch() {
 }
 
 function initBoard() {
-    board = Chessboard('myBoard', { draggable: true, position: 'start', onDrop: onDrop });
+    const config = {
+        draggable: true,
+        position: 'start',
+        pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+        onDrop: onDrop
+    };
+    board = Chessboard('myBoard', config);
 }
 
 async function onDrop(source, target) {
