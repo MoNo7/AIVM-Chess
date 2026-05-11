@@ -2,31 +2,28 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 import { ethers } from 'ethers';
 import { Chess } from 'chess.js';
 
-const CONTRACT_ADDRESS = "0xD4c213Fe046fe72Aa456b18B7b4b39A630fE7B17";
-const ABI = [
-    "function submitMove(address player, string move) external",
-    "function matches(address) view returns (uint256, uint256, string, string, uint256, uint256, bool)",
-    "function completeMatch(address player, bool playerWon, bool isDraw, uint256 moveCount, string pgn) external"
-];
-
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
+    
     const { playerAddress, move } = req.body;
+    const CONTRACT_ADDRESS = "0xD4c213Fe046fe72Aa456b18B7b4b39A630fE7B17";
+    const ABI = [
+        "function submitMove(address player, string move) external",
+        "function matches(address) view returns (uint256, uint256, string, string, uint256, uint256, bool)",
+        "function completeMatch(address player, bool playerWon, bool isDraw, uint256 moveCount, string pgn) external"
+    ];
 
     try {
         // --- 1. THE FIX: Define network and use it as a static property ---
-        const network = ethers.Network.from(8200); // Lightchain Testnet ChainID
-        const provider = new ethers.JsonRpcProvider(process.env.LIGHTCHAIN_RPC_URL, network, {
-            staticNetwork: network
-        });
-
+        const network = ethers.Network.from(8200);
+        const provider = new ethers.JsonRpcProvider(process.env.LIGHTCHAIN_RPC_URL, network, { staticNetwork: network });
         const relayerWallet = new ethers.Wallet(process.env.RELAYER_PRIVATE_KEY, provider);
         const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, relayerWallet);
-
-        // --- 2. Fetch Game State ---
         const gameData = await contract.matches(playerAddress);
-        if (!gameData || !gameData[6]) { 
-            return res.status(400).json({ success: false, error: "No active game found." });
+        
+        // Validation: matches() returns a struct, FEN is index [2], isActive is index [6]
+        if (!gameData || !gameData[6]) {
+            return res.status(400).json({ success: false, error: "No active game found" });
         }
 
         const game = new Chess(gameData[2]); 
