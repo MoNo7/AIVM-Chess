@@ -34,8 +34,20 @@ async function connectWallet() {
             contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
             
             // Restore visibility
-            const display = document.getElementById('wallet-address');
-            display.innerText = `Connected: ${userAddress.substring(0, 6)}...${userAddress.substring(38)}`;
+            const walletDisplay = document.getElementById('wallet-address');
+            walletDisplay.innerText = `Connected: ${userAddress.substring(0, 6)}...${userAddress.substring(38)}`;
+            walletDisplay.style.color = "#00ffa3"; // Make it look active
+            
+            // Ensure the click opens the admin panel
+            walletDisplay.onclick = () => {
+                const panel = document.getElementById('admin-panel');
+                if (panel.style.display === 'none') {
+                    panel.style.display = 'block';
+                    updateVaultDisplay(); // Refresh the LCAI balance
+                } else {
+                    panel.style.display = 'none';
+                }
+            };
             
             document.getElementById('game-options').style.display = 'block';
             
