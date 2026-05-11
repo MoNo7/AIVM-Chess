@@ -211,7 +211,7 @@ async function onDrop(source, target) {
 //connectBtn.addEventListener('click', connectWallet);
 document.getElementById('adminWithdrawBtn').addEventListener('click', adminWithdraw);
 document.getElementById('startGameBtn').addEventListener('click', startMatch);
-document.addEventListener('DOMContentLoaded', () => {
+//document.addEventListener('DOMContentLoaded', () => {
 window.onload = () => {
     const startBtn = document.getElementById('start-btn');
         if (startBtn) {
@@ -219,4 +219,4 @@ window.onload = () => {
         } else {
             console.warn("Start button not found in HTML");
         }
-    };
+};
