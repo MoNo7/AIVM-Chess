@@ -32,9 +32,9 @@ async function connectWallet() {
         
         provider = new ethers.BrowserProvider(window.ethereum);
         signer = await provider.getSigner();
-        const userAddress = await signer.getAddress();
+        contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
         
-        // Fetch the owner from the contract
+        const userAddress = await signer.getAddress();
         const ownerAddress = await contract.protocolOwner();
         
         // If the connected user is the owner, show the admin menu
