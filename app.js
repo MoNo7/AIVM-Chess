@@ -224,8 +224,9 @@ function initBoard() {
     const config = {
         draggable: true,
         position: 'start',
-        pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
-        onDrop: onDrop
+        onDragStart: onDragStart, // <--- Enforces turn
+        onDrop: onDrop,           // <--- Handles blockchain sync
+        onSnapEnd: onSnapEnd
     };
     board = Chessboard('myBoard', config);
 }
@@ -234,7 +235,10 @@ async function onDrop(source, target) {
     const move = game.move({ from: source, to: target, promotion: 'q' });
     if (move === null) return 'snapback';
 
-    gameStatus.innerText = "AIVM is thinking...";
+    // Update UI status
+    document.getElementById('game-status').innerText = "Syncing move to Lightchain...";
+
+
     try {
         const response = await fetch('/api/relayer', {
             method: 'POST',
@@ -242,12 +246,62 @@ async function onDrop(source, target) {
             body: JSON.stringify({ playerAddress: userAddress, move: move.san })
         });
         const data = await response.json();
+        const tx = await contract.submitMove(move.from + move.to); 
+        await tx.wait(); // Wait for block confirmation
+        document.getElementById('game-status').innerText = "AIVM is thinking...";
+        requestAIVMMove();
         if (data.success) {
             game.move(data.aiMove);
             board.position(game.fen());
             gameStatus.innerText = data.gameOver ? "Game Over!" : "Your Turn";
         }
-    } catch (error) { alert("The AIVM encountered an error."); }
+    } catch (error) { 
+
+        console.error("Move failed:", error);
+        game.undo(); // Revert chess.js state if blockchain call fails
+        board.position(game.fen());
+        document.getElementById('game-status').innerText = "Transaction failed. Try again.";
+        return 'snapback';
+    }
+}
+
+// Add this logic to your configuration
+function onDragStart(source, piece, position, orientation) {
+    // 1. Block moves if the game is over
+    if (game.game_over()) return false;
+
+    // 2. Block moves if it is not your turn (AIVM is 'b')
+    if (game.turn() === 'b') {
+        console.warn("Wait for AIVM to move...");
+        return false;
+    }
+
+    // 3. Only allow picking up White pieces
+    if (piece.search(/^b/) !== -1) return false;
+}
+
+// Ensure the board stays in sync after animations
+function onSnapEnd() {
+    board.position(game.fen());
+}
+
+async function requestAIVMMove() {
+    try {
+        // Poll the contract/AIVM for the new FEN
+        // This ensures the board updates only when the AIVM has actually processed
+        const matchData = await contract.matches(userAddress);
+        
+        if (matchData.currentFEN !== game.fen()) {
+            game.load(matchData.currentFEN);
+            board.position(game.fen());
+            document.getElementById('game-status').innerText = "Your Turn!";
+        } else {
+            // Still thinking? Poll again in 3 seconds
+            setTimeout(requestAIVMMove, 3000);
+        }
+    } catch (e) {
+        console.error("AIVM Sync Error:", e);
+    }
 }
 
 // --- 5. Event Listeners ---
