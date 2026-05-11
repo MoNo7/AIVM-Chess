@@ -95,3 +95,86 @@ async function adminWithdraw() {
 // --- Event Listeners ---
 connectBtn.addEventListener('click', connectWallet);
 document.getElementById('adminWithdrawBtn').addEventListener('click', adminWithdraw);
+
+let game = new Chess();
+let board = null;
+
+// --- 1. Start Match (On-Chain) ---
+async function startMatch() {
+    const betInput = document.getElementById('betAmount').value;
+    if (!betInput || betInput <= 0) return alert("Enter a valid bet");
+
+    try {
+        const betWei = ethers.parseEther(betInput);
+        const gasReserveWei = ethers.parseEther("50.5"); // 101 moves * 0.5 LCAI
+        const totalValue = betWei + gasReserveWei;
+
+        document.getElementById('game-status').innerText = "Confirming Transaction...";
+        
+        // Initial FEN is the starting position
+        const tx = await contract.startMatch("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", {
+            value: totalValue
+        });
+
+        await tx.wait();
+        document.getElementById('game-status').innerText = "Game Live! Your Move (White)";
+        initBoard();
+    } catch (error) {
+        console.error(error);
+        alert("Failed to start match. Ensure you have enough LCAI for bet + gas.");
+    }
+}
+
+// --- 2. Initialize Visual Board ---
+function initBoard() {
+    const config = {
+        draggable: true,
+        position: 'start',
+        onDrop: onDrop
+    };
+    board = Chessboard('myBoard', config);
+}
+
+// --- 3. Handle Player Move ---
+async function onDrop(source, target) {
+    const move = game.move({
+        from: source,
+        to: target,
+        promotion: 'q' // Always promote to queen for simplicity
+    });
+
+    if (move === null) return 'snapback';
+
+    document.getElementById('game-status').innerText = "AIVM is thinking...";
+
+    // Call your Vercel Relayer API
+    try {
+        const response = await fetch('/api/relayer', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                playerAddress: userAddress,
+                move: move.san
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Apply AI Move to local board
+            game.move(data.aiMove);
+            board.position(game.fen());
+            
+            if (data.gameOver) {
+                document.getElementById('game-status').innerText = "Game Over! Check Contract for Payout.";
+            } else {
+                document.getElementById('game-status').innerText = "Your Turn";
+            }
+        }
+    } catch (error) {
+        console.error("Relayer Error:", error);
+        alert("The AIVM encountered an error. Check console.");
+    }
+}
+
+document.getElementById('startGameBtn').addEventListener('click', startMatch);
