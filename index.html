@@ -14,23 +14,23 @@
 <div class="container">
     <h1>Play the AIVM Grandmaster</h1>
     
-    <div id="setup-area">
-        <button id="connect-btn" onclick="connectWallet()">Connect Wallet</button>
-        <p id="wallet-address" onclick="toggleAdminMenu()" style="cursor: pointer; color: #aaa;">Not Connected</p>        
-        <div id="game-options" style="display: none;">
-            <input type="number" id="betAmount" placeholder="Bet Amount (Optional)">
-            <button id="start-btn" onclick="startMatch()">Start Match</button>
+   <div id="setup-area">
+        <div id="wallet-info">
+            <span id="wallet-address" style="cursor:pointer; font-weight:bold;">Connect Wallet</span>
         </div>
+        
+        <div id="game-setup-controls">
+            <input type="number" id="betAmount" placeholder="Bet Amount (LCAI)" value="0">
+            <button id="connect-btn" class="btn">Connect Wallet</button>
+            <button id="start-btn" class="btn" style="display:none;">Start Match</button>
+        </div>
+           <div id="game-options" style="display:none;">
+            <button id="start-btn" class="btn">Start New Match</button>
+            <button id="reset-btn" class="btn btn-secondary">Reset Board</button>
+        </div>
+        
     </div>
 
-    <div id="game-options" style="display:none;">
-        <button id="start-btn" class="btn">Start New Match</button>
-        <button id="reset-btn" class="btn btn-secondary">Reset Board</button>
-    </div>
-    
-    <div id="wallet-info">
-        <span id="wallet-address" style="cursor:pointer; font-weight:bold;">Connect Wallet</span>
-    </div>
     
     <div id="admin-panel" style="display:none; border: 1px solid red; padding: 10px; margin-top: 20px;">
         <h3>Admin Dashboard</h3>
@@ -51,6 +51,8 @@
         <h2 id="game-title">Game in Progress</h2>
         <div id="myBoard" style="width: 400px; margin: auto;"></div>
         <p id="game-status"></p>
+        <div class="active-game-buttons">
+        <button id="reset-btn" class="btn btn-danger">Emergency Reset Board</button>
     </div>
 </div>
 
