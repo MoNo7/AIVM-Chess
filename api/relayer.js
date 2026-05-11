@@ -58,7 +58,7 @@ export default async function handler(req, res) {
         console.log("Current FEN from Contract:", gameData[2]);
         console.log("Move received from UI:", move);
         
-        const moveResult = game.move(moveObj); 
+        const moveResult = game.move(move); 
 
         if (!moveResult) {
             console.error("Validation Failed. FEN:", gameData.currentFEN, "Move Attempted:", moveObj);
