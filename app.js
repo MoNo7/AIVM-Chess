@@ -169,7 +169,9 @@ async function startMatch() {
 
         
         initBoard();
+        setTimeout(() => {
         board.resize();
+        }, 100);
     } catch (error) { alert("Failed to start match."); }
 }
 
