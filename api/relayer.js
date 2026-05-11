@@ -13,27 +13,42 @@ export default async function handler(req, res) {
     ];
 
     try {
-        // Force static network to bypass the RPC handshake crash
-        const network = ethers.Network.from(8200);
-        const provider = new ethers.JsonRpcProvider(process.env.LIGHTCHAIN_RPC_URL, network, { 
+        // --- THE FIX: Force static network to avoid RPC handshake crash ---
+        const network = ethers.Network.from(8200); 
+        const provider = new ethers.JsonRpcProvider(process.env.LIGHTCHAIN_RPC_URL, network, {
             staticNetwork: network 
         });
+
         const relayerWallet = new ethers.Wallet(process.env.RELAYER_PRIVATE_KEY, provider);
         const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, relayerWallet);
 
-        // Fetch game state
+        // 1. Fetch Game State
         const gameData = await contract.matches(playerAddress);
-        
-        // Validation: matches() returns a struct; isActive is index [6]
-        if (!gameData || !gameData[6]) {
+        if (!gameData || !gameData[6]) { // isActive is index 6
             return res.status(400).json({ success: false, error: "No active game found" });
         }
 
-        const game = new Chess(gameData[2]); // currentFEN
-        if (!game.move(move)) throw new Error("Invalid move");
+        const game = new Chess(gameData[2]); // currentFEN is index 2
+        if (!game.move(move)) throw new Error("Invalid move: " + move);
 
-        // ... Proceed with AIVM Inference and submitMove ...
-        res.status(200).json({ success: true, newFEN: game.fen() });
+        // 2. AIVM Inference
+        const aiResponse = await fetch(process.env.AIVM_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                prompt: `FEN: ${game.fen()}. Move:`,
+                model: "chess-master-v1"
+            })
+        });
+
+        const rawAiData = await aiResponse.text();
+        let aiMoveSAN = rawAiData.trim(); // Handle raw string responses
+
+        // 3. Update Contract
+        const tx = await contract.submitMove(playerAddress, aiMoveSAN);
+        await tx.wait();
+
+        res.status(200).json({ success: true, aiMove: aiMoveSAN, newFEN: game.fen() });
 
     } catch (error) {
         console.error("Relayer Error:", error.message);
