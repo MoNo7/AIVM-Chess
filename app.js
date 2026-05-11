@@ -21,67 +21,27 @@ const adminPanel = document.getElementById('admin-panel');
 const gameControls = document.getElementById('game-controls');
 const gameStatus = document.getElementById('game-status');
 
-// --- 1. Wallet Connection (Fixes Coinbase/MetaMask Conflict) ---
 async function connectWallet() {
-    if (window.ethereum) {
-        try {
-            // FIX: Identify the correct provider without re-declaring 'provider'
-            let selectedInjectedProvider = window.ethereum;
-            if (window.ethereum.providers) {
-                selectedInjectedProvider = window.ethereum.providers.find(p => p.isMetaMask) || window.ethereum;
-            }
+    // 1. DEFINE VARIABLES FIRST
+    const walletText = document.getElementById('wallet-address');
+    const connectBtn = document.getElementById('connect-btn');
+    const gameOptions = document.getElementById('game-options');
 
-            provider = new ethers.BrowserProvider(window.ethereum);
-            signer = await provider.getSigner();
-            await provider.send("eth_requestAccounts", []);
-            const userAddress = await signer.getAddress();
-            
-            // Initialize Contract
-            contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-
-            const gameData = await contract.matches(userAddress);
-            const startTime = Number(gameData[0]); // The timestamp of the match
-            
-            if (startTime > 0) {
-                console.log("Active game found. Resuming...");
-                const currentFEN = gameData[2]; // Struct index 2 is currentFEN
-                
-                // Update local engine
-                game = new Chess(currentFEN);
-                
-                // Update UI
-                if (walletText) walletText.innerText = `Connected: ${userAddress.slice(0,6)}...`;
-                if (connectBtn) connectBtn.style.display = 'none';
-                if (gameOptions) gameOptions.style.display = 'block';
+    try {
+        if (!window.ethereum) return alert("Please install MetaMask");
         
-                // 4. Resume Check
-                checkActiveGame(userAddress);
-                gameStatus.innerText = "Resumed active game. Your move.";
-                initBoard();
-                board.position(currentFEN);
-            }
+        provider = new ethers.BrowserProvider(window.ethereum);
+        signer = await provider.getSigner();
+        const userAddress = await signer.getAddress();
 
-            // Update UI
-            walletDisplay.innerText = `Connected: ${userAddress.slice(0, 6)}...${userAddress.slice(-4)}`;
-            connectBtn.style.display = "none";
-            gameControls.style.display = "block";
+        // 2. NOW USE THEM
+        if (walletText) walletText.innerText = `Connected: ${userAddress.slice(0,6)}...`;
+        if (connectBtn) connectBtn.style.display = 'none';
+        if (gameOptions) gameOptions.style.display = 'block';
 
-            checkOwnerStatus();
-            const connectBtn = document.getElementById('connect-btn');
-            const gameOptions = document.getElementById('game-options');
-            
-            if (connectBtn) connectBtn.style.display = 'none';
-            if (gameOptions) gameOptions.style.display = 'block';
-            document.getElementById('wallet-address').innerText = `Connected: ${userAddress.slice(0,6)}...`;
-            document.getElementById('setup-area').style.display = 'none';
-            document.getElementById('connect-btn').style.display = 'none'; // Hide first connect button
-            document.getElementById('game-options').style.display = 'block'; // Show bet/start
-        } catch (error) {
-            console.error("Connection Failed:", error);
-            alert("Connection failed. Check MetaMask.");
-        }
-    } else {
-        alert("Please install MetaMask!");
+        checkActiveGame(userAddress);
+    } catch (error) {
+        console.error("Connection Failed:", error);
     }
 }
 
