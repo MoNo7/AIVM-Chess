@@ -9,29 +9,35 @@ export default async function handler(req, res) {
     const CONTRACT_ADDRESS = "0xD4c213Fe046fe72Aa456b18B7b4b39A630fE7B17";
 
     try {
-        // --- BYPASSING HANDSHAKE CRASH ---
-        // We define the network manually to stop ethers from asking the RPC for chainId
+        // --- HARDENED PROVIDER SETUP ---
         const network = ethers.Network.from(8200); 
         const provider = new ethers.JsonRpcProvider(process.env.LIGHTCHAIN_RPC_URL, network, {
-            staticNetwork: network
+            staticNetwork: true // Tell Ethers to NEVER probe the network
         });
 
         const relayerWallet = new ethers.Wallet(process.env.RELAYER_PRIVATE_KEY, provider);
         
-        // FIXED: Corrected ABI indices to match your Match struct:
-        // (uint256 wager, uint256 gasRemaining, string FEN, string PGN, uint256 moveCount, uint256 timestamp, bool isActive)
+        // Match struct from your Solidity: 
+        // (uint256 wager, uint256 gasRemaining, string currentFEN, string pgn, uint256 moveCount, uint256 lastMoveTimestamp, bool isActive)
         const contract = new ethers.Contract(CONTRACT_ADDRESS, [
             "function submitMove(address player, string move) external",
             "function matches(address player) view returns (uint256, uint256, string, string, uint256, uint256, bool)"
         ], relayerWallet);
 
-        // 1. Fetch Game State
-        const gameData = await contract.matches(playerAddress);
-        if (!gameData || !gameData[6]) { // isActive is the 7th item (index 6)
+        // 1. Fetch Game State (Catching the RPC crash here)
+        let gameData;
+        try {
+            gameData = await contract.matches(playerAddress);
+        } catch (rpcErr) {
+            console.error("RPC Connection Error:", rpcErr.message);
+            throw new Error("Could not connect to Lightchain RPC. It might be down or rate-limited.");
+        }
+
+        if (!gameData || !gameData[6]) { 
             return res.status(400).json({ success: false, error: "No active game found" });
         }
 
-        const game = new Chess(gameData[2]); // currentFEN is index 2
+        const game = new Chess(gameData[2]); // currentFEN
         if (!game.move(move)) throw new Error("Invalid player move: " + move);
 
         // 2. AIVM Inference
@@ -47,9 +53,10 @@ export default async function handler(req, res) {
         const rawAiData = await aiResponse.text();
         let aiMoveSAN = rawAiData.trim().replace(/['"]+/g, ''); 
 
+        // Apply AI move locally
         if (!game.move(aiMoveSAN)) throw new Error("AIVM illegal move: " + aiMoveSAN);
 
-        // 3. Submit AIVM move to the Lightchain contract
+        // 3. Submit to Chain
         const tx = await contract.submitMove(playerAddress, aiMoveSAN);
         await tx.wait();
 
