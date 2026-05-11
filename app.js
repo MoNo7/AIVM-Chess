@@ -270,7 +270,7 @@ async function onDrop(source, target) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     playerAddress: userAddress, 
-                    move: source + target 
+                    move: { From: source, To: target } 
                 })
             });
             
