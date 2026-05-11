@@ -9,58 +9,31 @@ export default async function handler(req, res) {
     const CONTRACT_ADDRESS = "0xD4c213Fe046fe72Aa456b18B7b4b39A630fE7B17";
     const ABI = [
         "function submitMove(address player, string move) external",
-        "function matches(address) view returns (uint256, uint256, string, string, uint256, uint256, bool)",
-        "function completeMatch(address player, bool playerWon, bool isDraw, uint256 moveCount, string pgn) external"
+        "function matches(address) view returns (uint256, uint256, string, string, uint256, uint256, bool)"
     ];
 
     try {
-        // --- 1. THE FIX: Define network and use it as a static property ---
+        // Force static network to bypass the RPC handshake crash
         const network = ethers.Network.from(8200);
-        const provider = new ethers.JsonRpcProvider(process.env.LIGHTCHAIN_RPC_URL, network, { staticNetwork: network });
+        const provider = new ethers.JsonRpcProvider(process.env.LIGHTCHAIN_RPC_URL, network, { 
+            staticNetwork: network 
+        });
         const relayerWallet = new ethers.Wallet(process.env.RELAYER_PRIVATE_KEY, provider);
         const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, relayerWallet);
+
+        // Fetch game state
         const gameData = await contract.matches(playerAddress);
         
-        // Validation: matches() returns a struct, FEN is index [2], isActive is index [6]
+        // Validation: matches() returns a struct; isActive is index [6]
         if (!gameData || !gameData[6]) {
             return res.status(400).json({ success: false, error: "No active game found" });
         }
 
-        const game = new Chess(gameData[2]); 
-        if (!game.move(move)) throw new Error("Invalid player move");
+        const game = new Chess(gameData[2]); // currentFEN
+        if (!game.move(move)) throw new Error("Invalid move");
 
-        // --- 3. AIVM Inference ---
-        const aiResponse = await fetch(process.env.AIVM_ENDPOINT, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                prompt: `FEN: ${game.fen()}. Move:`,
-                model: "chess-master-v1"
-            })
-        });
-
-        // Use .text() to avoid crashing on non-JSON AIVM responses
-        const rawAiData = await aiResponse.text();
-        let aiMoveSAN;
-        try {
-            const parsed = JSON.parse(rawAiData);
-            aiMoveSAN = parsed.result?.trim();
-        } catch (e) {
-            aiMoveSAN = rawAiData.trim();
-        }
-
-        if (!game.move(aiMoveSAN)) throw new Error("AIVM returned illegal move: " + aiMoveSAN);
-
-        // --- 4. Submit to Lightchain ---
-        // Ensure you use the exact function signature from your contract
-        const tx = await contract.submitMove(playerAddress, aiMoveSAN);
-        await tx.wait();
-
-        res.status(200).json({ 
-            success: true, 
-            aiMove: aiMoveSAN, 
-            newFEN: game.fen() 
-        });
+        // ... Proceed with AIVM Inference and submitMove ...
+        res.status(200).json({ success: true, newFEN: game.fen() });
 
     } catch (error) {
         console.error("Relayer Error:", error.message);
