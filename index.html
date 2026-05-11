@@ -24,18 +24,16 @@
         </div>
     </div>
 
+    <div id="admin-menu" style="display: none; background: #2a2a2a; padding: 15px; border-radius: 8px; margin-top: 10px;">
+        <h3>Admin Dashboard</h3>
+        <p>Vault Balance: <span id="vault-balance">0</span> LCAI</p>
+        <button onclick="updateVaultDisplay()">Refresh Balance</button>
+    </div>
+
     <div id="board-container" style="display: none;">
         <div id="myBoard" style="width: 400px; margin: 0 auto;"></div>
-        <p id="gameStatus"></p>
     </div>
-            
-        <div id="admin-panel" style="display: none; border: 2px solid #ffd700; padding: 20px; margin-top: 20px;">
-            <h2 style="color: #ffd700;">Admin Master Menu</h2>
-            <p>Available Vault: <span id="vault-available">0</span> LCAI</p>
-            <input type="number" id="withdraw-amount" placeholder="Amount to withdraw">
-            <button id="adminWithdrawBtn">Withdraw to Owner Wallet</button>
-        </div>
-    </div>
+</div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
