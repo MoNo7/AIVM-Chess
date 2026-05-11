@@ -61,6 +61,9 @@ async function connectWallet() {
             gameControls.style.display = "block";
 
             checkOwnerStatus();
+            document.getElementById('wallet-address').innerText = `Connected: ${userAddress.slice(0,6)}...`;
+            document.getElementById('connect-btn').style.display = 'none'; // Hide first connect button
+            document.getElementById('game-options').style.display = 'block'; // Show bet/start
         } catch (error) {
             console.error("Connection Failed:", error);
             alert("Connection failed. Check MetaMask.");
@@ -161,6 +164,10 @@ async function startMatch() {
 
         // Hide the setup area
         document.getElementById('setup-area').style.display = 'none';
+        document.getElementById('game-title').innerText = "Game in Progress";
+
+        const boardContainer = document.getElementById('board-container');
+        boardContainer.style.display = 'block';
         
         // Expand the board container
         const boardElement = document.getElementById('myBoard');
@@ -170,7 +177,7 @@ async function startMatch() {
         
         initBoard();
         setTimeout(() => {
-        board.resize();
+            board.resize();
         }, 100);
     } catch (error) { alert("Failed to start match."); }
 }
