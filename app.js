@@ -167,32 +167,38 @@ async function startMatch() {
     } catch (error) { alert("Failed to start match."); }
 }
 
-async function checkActiveGame(userAddress) {
-    // 1. Fetch the FEN from your AIVMChessReferee contract
-    // const matchData = await contract.matches(userAddress);
-    // const currentFEN = matchData.currentFEN;
-    if (!contract) return; // Safety check
-    // Ensure 'matches' is in your CONTRACT_ABI
+async function checkActiveGame(address) {
+    if (!contract) return;
+
     try {
-        const gameData = await contract.matches(userAddress);
+        // Fetch match data from Lightchain
+        const gameData = await contract.matches(address);
+        
+        // In Solidity, your Match struct has 'isActive'
         if (gameData && gameData.isActive) {
+            console.log("Active game found, resuming...");
             
-            if (currentFEN && currentFEN !== "") {
-                resumeGame(currentFEN);
-            }
-            // Hide setup, show board
-            document.getElementById('setup-area').style.display = 'none';
-            document.getElementById('board-container').style.display = 'block';
+            // 1. Hide the entry UI
+            const setupArea = document.getElementById('setup-area');
+            if (setupArea) setupArea.style.display = 'none';
             
-            // Load the saved FEN
+            // 2. Show the Board Container
+            const boardContainer = document.getElementById('board-container');
+            boardContainer.style.display = 'block';
+
+            // 3. Sync the JS game state with the Contract FEN
             game = new Chess(gameData.currentFEN);
-            initBoard();
+            
+            // 4. Initialize the visual board
+            if (!board) {
+                initBoard(); 
+            }
             board.position(gameData.currentFEN);
             
-            document.getElementById('gameStatus').innerText = "Game Resumed!";
+            document.getElementById('game-status').innerText = "Game Resumed! Your Turn.";
         }
     } catch (e) {
-        console.error("No active game found:", e);
+        console.error("Error resuming game:", e);
     }
 }
 
