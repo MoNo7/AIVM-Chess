@@ -1,0 +1,101 @@
+/* General Theme */
+body {
+    background-color: #121212;
+    color: #e0e0e0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    justify-content: center;
+    padding: 40px;
+    margin: 0;
+}
+
+.container {
+    max-width: 600px;
+    width: 100%;
+    text-align: center;
+    background: #1e1e1e;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+h1 {
+    color: #ffffff;
+    margin-bottom: 5px;
+}
+
+p {
+    color: #b0b0b0;
+    font-size: 0.9rem;
+}
+
+/* Wallet & Buttons */
+#wallet-section {
+    margin-bottom: 25px;
+}
+
+button {
+    background-color: #3b82f6;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+button:hover {
+    background-color: #2563eb;
+}
+
+input {
+    background: #2a2a2a;
+    border: 1px solid #444;
+    color: white;
+    padding: 10px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    width: 80%;
+}
+
+/* Board Styling */
+#myBoard {
+    border: 5px solid #333;
+    border-radius: 4px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+
+/* Admin Panel - Gold Accent */
+#admin-panel {
+    background: #1a1a1a;
+    border-color: #ffd700 !important;
+    margin-top: 30px;
+}
+
+#admin-panel h2 {
+    margin-top: 0;
+    font-size: 1.2rem;
+}
+
+#toggleAdminBtn {
+    background: #333;
+    color: #ffd700;
+    border: 1px solid #ffd700;
+}
+
+#toggleAdminBtn:hover {
+    background: #ffd700;
+    color: #1a1a1a;
+}
+
+#adminWithdrawBtn {
+    background-color: #d97706;
+}
+
+/* Game Status Text */
+#game-status {
+    font-weight: bold;
+    margin-top: 15px;
+    color: #34d399; /* Greenish */
+}
