@@ -1,3 +1,7 @@
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
+const ethers = require('ethers');
+
 import { ethers } from 'ethers';
 import { Chess } from 'chess.js';
 
@@ -43,13 +47,15 @@ export default async function handler(req, res) {
 
         // 5. Call Lightchain AIVM Inference
         // Note: Replace this URL with the actual Lightchain AIVM endpoint
-        const aiResponse = await fetch('https://api.lightchain.ai/v1/inference', {
+        const aiResponse = await fetch('https://testnet-rpc.lightchain.ai/v1/inference', { // Updated path
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                // If they require an API Key, add it here:
+                // 'Authorization': `Bearer ${process.env.LIGHTCHAIN_API_KEY}`
+            },
             body: JSON.stringify({
-                prompt: `You are a Chess Grandmaster playing Black. Current Board (FEN): ${game.fen()}. 
-                         Memory of past defeat: ${aiMemory}. 
-                         What is your best move in SAN notation (e.g., 'Nf3')?`,
+                prompt: `You are a Chess Grandmaster playing Black. Current Board (FEN): ${game.fen()}.`,
                 model: "chess-master-v1"
             })
         });
