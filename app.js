@@ -100,8 +100,10 @@ async function startMatch() {
     if (betInput < 0) return alert("Bet cannot be negative.");
     try {
         const betWei = ethers.parseEther(betInput);
-        const gasReserveWei = ethers.parseEther("51"); 
+        const gasReserveWei = ethers.parseEther("55"); 
         const totalValue = betWei + gasReserveWei;
+        gameStatus.innerText = "Estimating gas...";
+        console.log("Sending Total:", ethers.formatEther(totalValue), "LCAI");
         gameStatus.innerText = "Confirming Transaction...";
         
         const tx = await contract.startMatch("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", { value: totalValue });
