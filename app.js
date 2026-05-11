@@ -5,7 +5,7 @@ const CONTRACT_ABI = [
     "function lockedVaultFunds() view returns (uint256)",
     "function startMatch(string initialFEN) payable",
     "function manualWithdraw(uint256 amount) external",
-    "function activeGamesCount() view returns (uint8)"
+    "function activeGamesCount() view returns (uint8)",
     "function matches(address player) view returns (uint256 startTime, address playerAddr, string currentFEN, string pgn, uint256 betAmount, bool isActive)"
 ];
 
