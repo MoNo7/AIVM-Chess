@@ -260,19 +260,21 @@ async function onDrop(source, target) {
             });
             
             // Check if response is actually JSON
-            if (response.ok) {
-                const data = await response.json();
-                if (data.success) {
-                    game.move(data.aiMove);
-                    board.position(game.fen());
-                }
-            }
-            const result = await response.json();
-            if (result.success) {
-                resumeGame(result.newFEN);
-            }
+        const data = await response.json(); // Read it EXACTLY once
+    
+        if (response.ok && data.success) {
+            // AI moved successfully
+            game.load(data.newFEN);
+            board.position(data.newFEN);
+            gameStatus.innerText = data.gameOver ? "Game Over!" : "AIVM Moved. Your Turn!";
+        } else {
+            throw new Error(data.error || "Relayer failed to process move");
+        }
         } catch (relayerErr) {
-            console.error("Relayer failed, but move is on-chain:", relayerErr);
+            console.error("Relayer Error:", relayerErr);
+            game.undo();
+            board.position(game.fen());
+            gameStatus.innerText = "Move failed: " + relayerErr.message;
         }
 
         // 3. Fallback to polling the contract for the AIVM move
