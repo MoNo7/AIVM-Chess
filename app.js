@@ -123,7 +123,7 @@ async function startMatch() {
     if (betInput < 0) return alert("Bet cannot be negative.");
     try {
         const betWei = ethers.parseEther(betInput);
-        const gasReserveWei = ethers.parseEther("55.0"); 
+        const gasReserveWei = ethers.parseEther("56.0"); 
         const totalValue = betWei + gasReserveWei;
         gameStatus.innerText = "Estimating gas...";
         console.log("Sending Total:", ethers.formatEther(totalValue), "LCAI");
