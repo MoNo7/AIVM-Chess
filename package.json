@@ -1,6 +1,7 @@
 {
   "name": "aivm-chess-dapp",
   "version": "1.0.0",
+  "type": "module",
   "description": "LCAI Chess dApp with AIVM Relayer",
   "main": "index.html",
   "scripts": {
