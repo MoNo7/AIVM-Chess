@@ -106,7 +106,12 @@ async function startMatch() {
         console.log("Sending Total:", ethers.formatEther(totalValue), "LCAI");
         gameStatus.innerText = "Confirming Transaction...";
         
-        const tx = await contract.startMatch("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", { value: totalValue });
+        // Execute
+        const tx = await contract.startMatch("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", { 
+            value: totalValue,
+            // Force a gas limit to bypass estimation errors if balance is tight
+            gasLimit: 500000 
+        });
         await tx.wait();
         gameStatus.innerText = "Game Live! Your Move (White)";
         initBoard();
