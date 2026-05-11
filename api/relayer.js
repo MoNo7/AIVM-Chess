@@ -14,8 +14,8 @@ export default async function handler(req, res) {
     const { playerAddress, move } = req.body;
 
     try {
-        // FIXED: Using a more robust provider initialization for Lightchain
-        const network = new ethers.Network("lightchain-testnet", 8200);
+        // --- 1. THE FIX: Define network and use it as a static property ---
+        const network = ethers.Network.from(8200); // Lightchain Testnet ChainID
         const provider = new ethers.JsonRpcProvider(process.env.LIGHTCHAIN_RPC_URL, network, {
             staticNetwork: network
         });
@@ -23,7 +23,7 @@ export default async function handler(req, res) {
         const relayerWallet = new ethers.Wallet(process.env.RELAYER_PRIVATE_KEY, provider);
         const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, relayerWallet);
 
-        // 1. Fetch Game State
+        // --- 2. Fetch Game State ---
         const gameData = await contract.matches(playerAddress);
         if (!gameData || !gameData[6]) { 
             return res.status(400).json({ success: false, error: "No active game found." });
@@ -32,7 +32,7 @@ export default async function handler(req, res) {
         const game = new Chess(gameData[2]); 
         if (!game.move(move)) throw new Error("Invalid player move");
 
-        // 2. AIVM Inference
+        // --- 3. AIVM Inference ---
         const aiResponse = await fetch(process.env.AIVM_ENDPOINT, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -42,6 +42,7 @@ export default async function handler(req, res) {
             })
         });
 
+        // Use .text() to avoid crashing on non-JSON AIVM responses
         const rawAiData = await aiResponse.text();
         let aiMoveSAN;
         try {
@@ -53,11 +54,16 @@ export default async function handler(req, res) {
 
         if (!game.move(aiMoveSAN)) throw new Error("AIVM returned illegal move: " + aiMoveSAN);
 
-        // 3. Submit to Chain
+        // --- 4. Submit to Lightchain ---
+        // Ensure you use the exact function signature from your contract
         const tx = await contract.submitMove(playerAddress, aiMoveSAN);
         await tx.wait();
 
-        res.status(200).json({ success: true, aiMove: aiMoveSAN, newFEN: game.fen() });
+        res.status(200).json({ 
+            success: true, 
+            aiMove: aiMoveSAN, 
+            newFEN: game.fen() 
+        });
 
     } catch (error) {
         console.error("Relayer Error:", error.message);
