@@ -43,15 +43,15 @@ export default async function handler(req, res) {
         const game = new Chess(gameData.currentFEN);
 
         // If move is a string like "h2h3", split it for the library
-        let moveObj;
+        let move;
         if (typeof move === 'string' && move.length === 4) {
-            moveObj = {
-                from: move.substring(0, 2),
-                to: move.substring(2, 4),
-                promotion: 'q' // Default for stability
+            move = {
+                from: (move.from || move.From || move.source).toLowerCase(),
+                to: (move.to || move.To || move.target).toLowerCase(),
+                promotion: 'q'
             };
         } else {
-            moveObj = move;
+            move = move;
         }
 
         
