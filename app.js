@@ -4,10 +4,11 @@ const CONTRACT_ADDRESS = "0xD4c213Fe046fe72Aa456b18B7b4b39A630fE7B17";
 const CONTRACT_ABI = [
     "function protocolOwner() view returns (address)",
     "function lockedVaultFunds() view returns (uint256)",
-    "function startMatch(string initialFEN) payable",
     "function manualWithdraw(uint256 amount) external",
     "function activeGamesCount() view returns (uint8)",
-    "function matches(address player) view returns (uint256 startTime, address playerAddr, string currentFEN, string pgn, uint256 betAmount, bool isActive)"
+    "function submitMove(string move) external", // Note: The user version is usually payable
+    "function matches(address) view returns (uint256 wager, uint256 gasRemaining, string currentFEN, string currentPGN, uint256 moveCount, uint256 lastMoveTimestamp, bool isActive)",
+    "function startMatch(string move) external payable"
 ];
 
 let provider, signer, contract;
@@ -28,7 +29,7 @@ async function connectWallet() {
             provider = new ethers.BrowserProvider(window.ethereum);
             const accounts = await provider.send("eth_requestAccounts", []);
             userAddress = accounts[0];
-            signer = await provider.getSigner();
+            const signer = await provider.getSigner();
             
             // Initialize contract instance so checkActiveGame can use it
             contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
@@ -245,8 +246,8 @@ async function onDrop(source, target) {
 
     try {
         // 1. Submit to Blockchain FIRST
-        const tx = await contract.submitMove(move.from + move.to);
-        await tx.wait(); 
+        //const tx = await contract.submitMove(move.from + move.to);
+        //await tx.wait(); 
 
         gameStatus.innerText = "AIVM is thinking...";
 
@@ -265,6 +266,10 @@ async function onDrop(source, target) {
                     game.move(data.aiMove);
                     board.position(game.fen());
                 }
+            }
+            const result = await response.json();
+            if (result.success) {
+                resumeGame(result.newFEN);
             }
         } catch (relayerErr) {
             console.error("Relayer failed, but move is on-chain:", relayerErr);
