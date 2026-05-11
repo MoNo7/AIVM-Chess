@@ -113,16 +113,17 @@ async function adminWithdraw() {
 
 // --- 4. Gameplay Logic ---
 async function startMatch() {
-
+    const betInput = document.getElementById('betAmount').value || "0";
+    
     if (game.fen() !== "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1" && !game.game_over()) {
         if (!confirm("You have an active game. Starting a new one will overwrite it. Proceed?")) return;
     }
     
-    const betInput = document.getElementById('betAmount').value || "0";
+
     if (betInput < 0) return alert("Bet cannot be negative.");
     try {
         const betWei = ethers.parseEther(betInput);
-        const gasReserveWei = ethers.parseEther("55"); 
+        const gasReserveWei = ethers.parseEther("55.0"); 
         const totalValue = betWei + gasReserveWei;
         gameStatus.innerText = "Estimating gas...";
         console.log("Sending Total:", ethers.formatEther(totalValue), "LCAI");
@@ -132,7 +133,7 @@ async function startMatch() {
         const tx = await contract.startMatch("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", { 
             value: totalValue,
             // Force a gas limit to bypass estimation errors if balance is tight
-            gasLimit: 500000 
+            gasLimit: 1000000 
         });
         await tx.wait();
         gameStatus.innerText = "Game Live! Your Move (White)";
