@@ -123,7 +123,7 @@ async function startMatch() {
     if (betInput < 0) return alert("Bet cannot be negative.");
     try {
         const betWei = ethers.parseEther(betInput);
-        const gasReserveWei = ethers.parseEther("45.0"); 
+        const gasReserveWei = ethers.parseEther("55.0"); 
         const totalValue = betWei + gasReserveWei;
         gameStatus.innerText = "Estimating gas...";
         console.log("Sending Total:", ethers.formatEther(totalValue), "LCAI");
@@ -132,8 +132,10 @@ async function startMatch() {
         // Execute
         const tx = await contract.startMatch("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", { 
             value: totalValue,
-            // Force a gas limit to bypass estimation errors if balance is tight
-            gasLimit: 500000 
+            gasLimit: 800000, // Sufficient for the match start
+            // This ensures the network fee doesn't eat your whole remaining 1.0 LCAI
+            maxPriorityFeePerGas: ethers.parseUnits("1", "gwei"), 
+            maxFeePerGas: ethers.parseUnits("2", "gwei")
         });
         await tx.wait();
         gameStatus.innerText = "Game Live! Your Move (White)";
