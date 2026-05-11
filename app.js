@@ -158,7 +158,18 @@ async function startMatch() {
         });
         await tx.wait();
         gameStatus.innerText = "Game Live! Your Move (White)";
+
+        // Hide the setup area
+        document.getElementById('setup-area').style.display = 'none';
+        
+        // Expand the board container
+        const boardElement = document.getElementById('myBoard');
+        boardElement.style.width = '90vw'; // 90% of viewport width
+        boardElement.style.maxWidth = '800px'; // Limit maximum size
+
+        
         initBoard();
+        board.resize();
     } catch (error) { alert("Failed to start match."); }
 }
 
