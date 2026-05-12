@@ -74,7 +74,7 @@ export default async function handler(req, res) {
 
         // 5. SUBMIT TO CHAIN
         //const tx = await contract.submitMove(playerAddress, aiMove);
-        const tx = await contract.submitMove(playerAddress, game.fen());
+        const tx = await contract.submitMove(playerAddress, aiMove);
         const receipt = await tx.wait();
 
         res.status(200).json({ success: true, aiMove, newFEN: game.fen(), txHash: receipt.hash });
