@@ -54,17 +54,22 @@ async function connectWallet() {
             if (connectBtn) connectBtn.style.display = 'none';
 
             // 3. Show Game Controls & Board Container
-            const gameControls = document.getElementById('game-controls');
             const boardContainer = document.getElementById('board-container');
+            const gameControls = document.getElementById('game-controls');
             
+            if (boardContainer) boardContainer.style.display = 'block';
             if (gameControls) gameControls.style.display = 'block';
-            if (boardContainer) {
-                boardContainer.style.display = 'block';
-                // CRITICAL: Tell chessboard.js to draw itself NOW that the container is visible
-                if (board) board.resize(); 
+            
+            // 2. Now initialize or resize the board
+            if (!board) {
+                // If board hasn't been created yet, create it now that the div is visible
+                board = Chessboard('myBoard', config);
+            } else {
+                // If it exists, force it to recalculate its 400px width
+                board.resize();
             }
-
-            // 4. Sync the game state
+            
+            // 3. Finally, check the game state
             checkActiveGame(userAddress);
         }
     } catch (error) {
@@ -95,19 +100,24 @@ async function checkOwnerStatus() {
 // --- 3. Vault & Revenue ---
 async function refreshVaultStats() {
     try {
+        // Ensure we are getting fresh data from the contract
         const totalBalanceWei = await provider.getBalance(CONTRACT_ADDRESS);
         const lockedWei = await contract.lockedVaultFunds();
         
-        // Use BigInt subtraction for Ethers v6
+        // Use BigInt for the calculation
         const availableWei = BigInt(totalBalanceWei) - BigInt(lockedWei);
+        
+        // Convert to human-readable LCAI
         const availableLCAI = ethers.formatEther(availableWei);
-        // FIX: Match the variable name and use parseFloat for a clean display
-        document.getElementById('vault-available').innerText = parseFloat(availableLCAI).toFixed(2);
-        console.log("Vault refreshed:", availableLCAI);
-        console.log("Vault Refresh Success:", availableLCAI);
-    } catch (e) {
-        console.error("Vault Refresh Error:", e);
-        document.getElementById('vault-available').innerText = "Error";
+        
+        const display = document.getElementById('vault-available');
+        if (display) {
+            // Use the exactly calculated variable name
+            display.innerText = parseFloat(availableLCAI).toFixed(2);
+        }
+        console.log("Vault sync successful:", availableLCAI);
+    } catch (err) {
+        console.error("Vault Refresh Failed:", err);
     }
 }
 
@@ -233,7 +243,9 @@ async function checkActiveGame(address) {
             if (!board) {
                 initBoard(); 
             }
-            board.position(gameData.currentFEN);
+            const contractFEN = gameData[2]; 
+            board.position(contractFEN);
+            game.load(contractFEN);
             
             document.getElementById('game-status').innerText = "Game Resumed! Your Turn.";
         }
