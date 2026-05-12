@@ -16,29 +16,30 @@
     
     <div id="setup-area">
         <div id="wallet-section">
-            <span id="wallet-address" style="cursor:pointer; font-weight:bold; color:#f1c40f;"></span>
+            <span id="wallet-address" style="cursor:pointer; font-weight:bold; color:#f1c40f; display:block; padding:10px;">Connect Wallet</span>
             <button id="connect-btn" class="btn">Connect Wallet</button>
         </div>
         
         <div id="game-controls" style="display:none;">
-            <input type="number" id="betAmount" placeholder="Bet (LCAI)" value="0">
+            <input type="number" id="betAmount" placeholder="Bet Amount (LCAI)" value="0">
             <button id="start-btn" class="btn">Start Match</button>
             <button id="reset-board-btn" class="btn btn-secondary">Sync Board</button>
         </div>
     </div>
 
-    <div id="admin-panel" style="display:none; border: 1px solid #ff4444; padding: 15px; background:#111;">
-        <h3>Admin Dashboard</h3>
-        <p>Vault: <span id="vault-available">0</span> LCAI</p>
+    <div id="admin-panel" style="display:none; border: 2px solid #ff4444; padding: 15px; margin-top:15px; background:#1a1a1a;">
+        <h3 style="color:#ff4444;">Admin Dashboard</h3>
+        <p>Vault Available: <span id="vault-available">0</span> LCAI</p>
         <input type="number" id="withdraw-amount" placeholder="LCAI">
-        <button id="adminWithdrawBtn">Withdraw</button>
+        <button id="adminWithdrawBtn" class="btn">Withdraw</button>
     </div>
 
-    <div id="board-container" style="display:none;">
+    <div id="board-container" style="display:none; margin-top: 20px;">
         <h2 id="game-title">Game in Progress</h2>
-        <div id="myBoard" style="width: 400px; margin: auto;"></div>
+        <div id="myBoard" style="width: 400px; height: 400px; margin: auto;"></div>
         <p id="game-status"></p>
     </div>
+</div>
 </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
