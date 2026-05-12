@@ -376,6 +376,18 @@ function resetGame() {
     }
 }
 
+document.getElementById('reset-board-btn').addEventListener('click', () => {
+    if (userAddress) {
+        console.log("Syncing board state from contract...");
+        checkActiveGame(userAddress);
+        
+        // Redraw just in case
+        if (board) board.resize(); 
+    } else {
+        alert("Connect wallet first!");
+    }
+});
+
 // --- 5. Event Listeners ---
 //connectBtn.addEventListener('click', connectWallet);
 document.getElementById('adminWithdrawBtn').addEventListener('click', adminWithdraw);
