@@ -40,7 +40,10 @@ async function connectWallet() {
             document.getElementById('connect-btn').style.display = 'none';
             document.getElementById('game-controls').style.display = 'block';
             document.getElementById('board-container').style.display = 'block'; // Shows the board
-            
+
+            if (board) {
+                board.resize(); 
+            }
             // Ensure the click opens the admin panel
             walletDisplay.onclick = () => {
                 const panel = document.getElementById('admin-panel');
@@ -216,6 +219,10 @@ async function checkActiveGame(address) {
             // 2. Show the Board Container
             const boardContainer = document.getElementById('board-container');
             boardContainer.style.display = 'block';
+
+            if (board) {
+                board.resize(); 
+            }
 
             // 3. Sync the JS game state with the Contract FEN
             game = new Chess(gameData.currentFEN);
