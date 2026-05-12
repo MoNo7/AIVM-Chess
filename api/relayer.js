@@ -59,6 +59,10 @@ export default async function handler(req, res) {
             console.error("Move validation failed. Contract FEN:", game.fen(), "Attempted Move:", finalizedMove);
             return res.status(400).json({ error: "Invalid move for current contract state", fen: game.fen() });
         }
+
+        if (!moveResult) {
+            throw new Error(`Invalid move: ${JSON.stringify(finalizedMove)} on board ${game.fen()}`);
+        }
         
         const moveSAN = moveResult.san;
 
