@@ -45,8 +45,7 @@ export default async function handler(req, res) {
         console.log("Move received from UI:", move);
 
 
-        // Clean up the move input
-        let finalizedMove;
+
         // Change this logic to:
         const finalizedMove = (typeof move === 'string') ? move : { from: move.from, to: move.to, promotion: 'q' };
         
