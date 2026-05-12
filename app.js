@@ -29,46 +29,48 @@ async function connectWallet() {
             provider = new ethers.BrowserProvider(window.ethereum);
             const accounts = await provider.send("eth_requestAccounts", []);
             userAddress = accounts[0];
-            const signer = await provider.getSigner();
-            
+            signer = await provider.getSigner();
             contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-            
-            // Restore visibility
+
+            // 1. Update Wallet Text & Hide Button
             const walletDisplay = document.getElementById('wallet-address');
-            walletDisplay.innerText = `Connected: ${userAddress.substring(0, 6)}...${userAddress.substring(38)}`;
-            // Ensure these IDs match your HTML exactly
-            document.getElementById('connect-btn').style.display = 'none';
-            document.getElementById('game-controls').style.display = 'block';
-            document.getElementById('board-container').style.display = 'block'; // Shows the board
-
-            if (board) {
-                board.resize(); 
+            const connectBtn = document.getElementById('connect-btn');
+            
+            if (walletDisplay) {
+                walletDisplay.innerText = `Connected: ${userAddress.substring(0, 6)}...${userAddress.substring(38)}`;
+                
+                // 2. Attach Admin Menu Toggle safely
+                walletDisplay.onclick = () => {
+                    const panel = document.getElementById('admin-panel');
+                    if (panel) {
+                        panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+                        if (panel.style.display === 'block') refreshVaultStats();
+                    } else {
+                        console.error("Admin panel ID missing in HTML!");
+                    }
+                };
             }
-            // Ensure the click opens the admin panel
-            walletDisplay.onclick = () => {
-                const panel = document.getElementById('admin-panel');
-                panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-                if (panel.style.display === 'block') updateVaultDisplay();
-            };
 
-            // Add the Admin Toggle
-            const addrLabel = document.getElementById('wallet-address');
-            addrLabel.innerText = `Connected: ${userAddress.slice(0,6)}...${userAddress.slice(-4)}`;
-            addrLabel.onclick = () => {
-                const panel = document.getElementById('admin-panel');
-                panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-            };
-            
+            if (connectBtn) connectBtn.style.display = 'none';
 
+            // 3. Show Game Controls & Board Container
+            const gameControls = document.getElementById('game-controls');
+            const boardContainer = document.getElementById('board-container');
             
+            if (gameControls) gameControls.style.display = 'block';
+            if (boardContainer) {
+                boardContainer.style.display = 'block';
+                // CRITICAL: Tell chessboard.js to draw itself NOW that the container is visible
+                if (board) board.resize(); 
+            }
+
+            // 4. Sync the game state
             checkActiveGame(userAddress);
-            checkOwnerStatus();
         }
     } catch (error) {
         console.error("Connection Failed:", error);
     }
 }
-
 async function checkOwnerStatus() {
     try {
         const owner = await contract.protocolOwner();
