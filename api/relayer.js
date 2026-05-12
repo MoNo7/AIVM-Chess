@@ -47,11 +47,8 @@ export default async function handler(req, res) {
 
         // Clean up the move input
         let finalizedMove;
-        if (typeof move === 'string') {
-            finalizedMove = { from: move.substring(0, 2), to: move.substring(2, 4), promotion: 'q' };
-        } else {
-            finalizedMove = { from: move.from, to: move.to, promotion: 'q' };
-        }
+        // Change this logic to:
+        const finalizedMove = (typeof move === 'string') ? move : { from: move.from, to: move.to, promotion: 'q' };
         
         const moveResult = game.move(finalizedMove);
         
@@ -78,7 +75,7 @@ export default async function handler(req, res) {
 
         // 5. SUBMIT TO CHAIN
         //const tx = await contract.submitMove(playerAddress, aiMove);
-        const tx = await contract.submitMove(playerAddress, aiMove);
+        const tx = await contract.submitMove(playerAddress, game.fen());
         const receipt = await tx.wait();
 
         res.status(200).json({ success: true, aiMove, newFEN: game.fen(), txHash: receipt.hash });
