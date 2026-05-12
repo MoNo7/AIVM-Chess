@@ -16,6 +16,15 @@ let userAddress = "";
 let game = new Chess();
 let board = null;
 
+const boardConfig = {
+    draggable: true,
+    position: 'start',
+    pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+    onDragStart: onDragStart,
+    onDrop: onDrop,
+    onSnapEnd: onSnapEnd
+};
+
 // --- Core Elements ---
 const connectBtn = document.getElementById('connectWalletBtn');
 const walletDisplay = document.getElementById('wallet-address');
@@ -35,6 +44,8 @@ async function connectWallet() {
             // 1. Update Wallet Text & Hide Button
             const walletDisplay = document.getElementById('wallet-address');
             const connectBtn = document.getElementById('connect-btn');
+            const boardContainer = document.getElementById('board-container');
+            const gameControls = document.getElementById('game-controls');
             
             if (walletDisplay) {
                 walletDisplay.innerText = `Connected: ${userAddress.substring(0, 6)}...${userAddress.substring(38)}`;
@@ -45,37 +56,31 @@ async function connectWallet() {
                     if (panel) {
                         panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
                         if (panel.style.display === 'block') refreshVaultStats();
-                    } else {
-                        console.error("Admin panel ID missing in HTML!");
                     }
                 };
             }
 
+            // 2. Show Board and Controls
             if (connectBtn) connectBtn.style.display = 'none';
-
-            // 3. Show Game Controls & Board Container
-            const boardContainer = document.getElementById('board-container');
-            const gameControls = document.getElementById('game-controls');
-            
             if (boardContainer) boardContainer.style.display = 'block';
             if (gameControls) gameControls.style.display = 'block';
-            
-            // 2. Now initialize or resize the board
+
+            // 3. Initialize Board correctly using boardConfig
             if (!board) {
-                // If board hasn't been created yet, create it now that the div is visible
-                board = Chessboard('myBoard', config);
+                board = Chessboard('myBoard', boardConfig);
             } else {
-                // If it exists, force it to recalculate its 400px width
                 board.resize();
             }
-            
-            // 3. Finally, check the game state
+
+            // 4. Sync Game & Vault
             checkActiveGame(userAddress);
+            refreshVaultStats(); 
         }
     } catch (error) {
         console.error("Connection Failed:", error);
     }
 }
+
 async function checkOwnerStatus() {
     try {
         const owner = await contract.protocolOwner();
