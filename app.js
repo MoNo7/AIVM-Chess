@@ -97,15 +97,15 @@ async function refreshVaultStats() {
         const lockedWei = await contract.lockedVaultFunds();
         
         // Use BigInt subtraction for Ethers v6
-        const availableWei = totalBalanceWei - lockedWei;
+        const availableWei = BigInt(totalBalanceWei) - BigInt(lockedWei);
         const availableLCAI = ethers.formatEther(availableWei);
-        
         // FIX: Match the variable name and use parseFloat for a clean display
         document.getElementById('vault-available').innerText = parseFloat(availableLCAI).toFixed(2);
-        
+        console.log("Vault refreshed:", availableLCAI);
         console.log("Vault Refresh Success:", availableLCAI);
     } catch (e) {
         console.error("Vault Refresh Error:", e);
+        document.getElementById('vault-available').innerText = "Error";
     }
 }
 
