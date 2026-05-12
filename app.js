@@ -59,7 +59,7 @@ async function connectWallet() {
                 panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
             };
             
-            document.getElementById('game-options').style.display = 'block';
+
             
             checkActiveGame(userAddress);
             checkOwnerStatus();
