@@ -47,27 +47,17 @@ export default async function handler(req, res) {
 
         // Clean up the move input
         let finalizedMove;
-        if (typeof move === 'string' && move.length === 4) {
-            finalizedMove = {
-                from: move.substring(0, 2).toLowerCase(),
-                to: move.substring(2, 4).toLowerCase(),
-                promotion: 'q'
-            };
-        } else if (typeof move === 'object') {
-            finalizedMove = {
-                from: (move.from || move.source).toLowerCase(),
-                to: (move.to || move.target).toLowerCase(),
-                promotion: 'q'
-            };
+        if (typeof move === 'string') {
+            finalizedMove = { from: move.substring(0, 2), to: move.substring(2, 4), promotion: 'q' };
         } else {
-            finalizedMove = move;
+            finalizedMove = { from: move.from, to: move.to, promotion: 'q' };
         }
         
         const moveResult = game.move(finalizedMove);
-
+        
         if (!moveResult) {
-            console.error("Move validation failed for:", finalizedMove);
-            return res.status(400).json({ error: "Invalid move logic", move: finalizedMove });
+            console.error("Move validation failed. Contract FEN:", game.fen(), "Attempted Move:", finalizedMove);
+            return res.status(400).json({ error: "Invalid move for current contract state", fen: game.fen() });
         }
         
         const moveSAN = moveResult.san;
