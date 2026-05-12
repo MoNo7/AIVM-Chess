@@ -62,14 +62,8 @@ export default async function handler(req, res) {
         } else {
             finalizedMove = move;
         }
-
         
-        
-        const moveResult = game.move({
-            from: move.from.toLowerCase(), 
-            to: move.to.toLowerCase(), 
-            promotion: 'q' 
-        });
+        const moveResult = game.move(finalizedMove);
 
         if (!moveResult) {
             console.error("Move validation failed for:", finalizedMove);
