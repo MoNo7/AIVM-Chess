@@ -60,17 +60,15 @@ input {
 }
 
 #board-container {
-    display: block !important; /* Force it to show for debugging */
-    margin: 20px auto;
-    min-height: 400px;
-    visibility: visible;
+    display: block; /* Ensures it is part of the document flow */
+    margin-top: 20px;
+    min-height: 420px; 
 }
 
 #myBoard {
     width: 400px;
+    height: 400px; /* CRITICAL: Force the height so it doesn't collapse into a grey bar */
     margin: 0 auto;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-    border: 3px solid #444;
 }
 
 /* Ensure the board stays sharp when resized */
