@@ -380,13 +380,7 @@ function resetGame() {
 
 document.getElementById('reset-board-btn').addEventListener('click', () => {
     if (userAddress) {
-        console.log("Syncing board state from contract...");
         checkActiveGame(userAddress);
-        
-        // Redraw just in case
-        if (board) board.resize(); 
-    } else {
-        alert("Connect wallet first!");
     }
 });
 
