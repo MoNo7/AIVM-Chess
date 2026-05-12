@@ -69,13 +69,14 @@ export default async function handler(req, res) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ prompt: `FEN: ${game.fen()}. Move:`, model: "chess-master-v1" })
         });
-        const aiMove = (await aiRes.text()).trim().replace(/['"]+/g, '');
+        const rawText = await aiRes.text();
+        const aiMove = rawText.match(/[a-h][1-8][a-h][1-8]/)?.[0] || rawText.trim().split(' ').pop().replace(/[^a-zA-Z0-9]/g, '');
 
         if (!game.move(aiMove)) throw new Error("AIVM returned illegal move: " + aiMove);
 
         // 5. SUBMIT TO CHAIN
-        //const tx = await contract.submitMove(playerAddress, aiMove);
-        const tx = await contract.submitMove(playerAddress, game.fen());
+        const tx = await contract.submitMove(playerAddress, aiMove);
+        //const tx = await contract.submitMove(playerAddress, game.fen());
         const receipt = await tx.wait();
 
         res.status(200).json({ success: true, aiMove, newFEN: game.fen(), txHash: receipt.hash });
