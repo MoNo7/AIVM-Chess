@@ -1,6 +1,6 @@
 // --- Configuration ---
 const OWNER_ADDRESS = "0x4D36B31d4BFB957A5D816B0f420a9e755EFc6a2c";
-const CONTRACT_ADDRESS = "0xB56aB3b7975c1F544D69392603336FEb27b8A83a";
+const CONTRACT_ADDRESS = "0xD4c213Fe046fe72Aa456b18B7b4b39A630fE7B17";
 const CONTRACT_ABI = [
     "function protocolOwner() view returns (address)",
     "function lockedVaultFunds() view returns (uint256)",
