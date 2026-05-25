@@ -289,6 +289,9 @@ function initBoard() {
     board = Chessboard('myBoard', config);
 }
 
+var game = new Chess();
+
+
 async function onDrop(source, target) {
     const move = game.move({
         from: source,
@@ -346,6 +349,7 @@ async function onDrop(source, target) {
         gameStatus.innerText = "Transaction failed. Check your LCAI balance.";
         return 'snapback';
     }
+    submitMoveToContract(move.san);
 }
 
 // Add this logic to your configuration
