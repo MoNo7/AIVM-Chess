@@ -6,7 +6,7 @@ const CONTRACT_ABI = [
     "function lockedVaultFunds() view returns (uint256)",
     "function manualWithdraw(uint256 amount) external",
     "function activeGamesCount() view returns (uint8)",
-    "function submitMove(string move) external", // Note: The user version is usually payable
+    "function submitMove(string move) external", 
     "function matches(address) view returns (uint256 wager, uint256 gasRemaining, string currentFEN, string currentPGN, uint256 moveCount, uint256 lastMoveTimestamp, bool isActive)",
     "function startMatch(string move) external payable"
 ];
@@ -41,7 +41,6 @@ async function connectWallet() {
             signer = await provider.getSigner();
             contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
 
-            // 1. Update Wallet Text & Hide Button
             const walletDisplay = document.getElementById('wallet-address');
             const connectBtn = document.getElementById('connect-btn');
             const boardContainer = document.getElementById('board-container');
@@ -50,7 +49,6 @@ async function connectWallet() {
             if (walletDisplay) {
                 walletDisplay.innerText = `Connected: ${userAddress.substring(0, 6)}...${userAddress.substring(38)}`;
                 
-                // 2. Attach Admin Menu Toggle safely
                 walletDisplay.onclick = () => {
                     const panel = document.getElementById('admin-panel');
                     if (panel) {
@@ -60,19 +58,16 @@ async function connectWallet() {
                 };
             }
 
-            // 2. Show Board and Controls
             if (connectBtn) connectBtn.style.display = 'none';
             if (boardContainer) boardContainer.style.display = 'block';
             if (gameControls) gameControls.style.display = 'block';
 
-            // 3. Initialize Board correctly using boardConfig
             if (!board) {
                 board = Chessboard('myBoard', boardConfig);
             } else {
                 board.resize();
             }
 
-            // 4. Sync Game & Vault
             checkActiveGame(userAddress);
             refreshVaultStats(); 
         }
@@ -86,11 +81,9 @@ async function checkOwnerStatus() {
         const owner = await contract.protocolOwner();
         
         if (userAddress.toLowerCase() === owner.toLowerCase()) {
-            // Make the wallet text act as the secret toggle button
             walletDisplay.classList.add('owner-wallet');
             walletDisplay.title = "Click to toggle Admin Panel";
             
-            // Toggle logic on the wallet text itself
             walletDisplay.addEventListener('click', () => {
                 const isHidden = adminPanel.style.display === "none";
                 adminPanel.style.display = isHidden ? "block" : "none";
@@ -105,22 +98,15 @@ async function checkOwnerStatus() {
 // --- 3. Vault & Revenue ---
 async function refreshVaultStats() {
     try {
-        // Ensure we are getting fresh data from the contract
         const totalBalanceWei = await provider.getBalance(CONTRACT_ADDRESS);
         const lockedWei = await contract.lockedVaultFunds();
-        
-        // Use BigInt for the calculation
         const availableWei = BigInt(totalBalanceWei) - BigInt(lockedWei);
-        
-        // Convert to human-readable LCAI
         const availableLCAI = ethers.formatEther(availableWei);
         
         const display = document.getElementById('vault-available');
         if (display) {
-            // Use the exactly calculated variable name
             display.innerText = parseFloat(availableLCAI).toFixed(2);
         }
-        console.log("Vault sync successful:", availableLCAI);
     } catch (err) {
         console.error("Vault Refresh Failed:", err);
     }
@@ -132,13 +118,9 @@ async function updateVaultDisplay() {
 }
 
 async function checkVaultLiquidity(userBet) {
-    // 1. Get the current contract balance
     const vaultBalance = await provider.getBalance(CONTRACT_ADDRESS);
     const vaultLCAI = parseFloat(ethers.formatEther(vaultBalance));
-    
-    // 2. Calculate the required payout (Bet + Gas Reserve)
     const requiredAmount = parseFloat(userBet) + 55.0;
-
     const warningElement = document.getElementById('bet-warning');
     
     if (requiredAmount > vaultLCAI) {
@@ -177,39 +159,32 @@ async function startMatch() {
         if (!confirm("You have an active game. Starting a new one will overwrite it. Proceed?")) return;
     }
     
-
     if (betInput < 0) return alert("Bet cannot be negative.");
     try {
         const betWei = ethers.parseEther(betInput);
         const gasReserveWei = ethers.parseEther("55.0"); 
         const totalValue = betWei + gasReserveWei;
         gameStatus.innerText = "Estimating gas...";
-        console.log("Sending Total:", ethers.formatEther(totalValue), "LCAI");
         gameStatus.innerText = "Confirming Transaction...";
         
-        // Execute
         const tx = await contract.startMatch("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", { 
             value: totalValue,
-            gasLimit: 800000, // Sufficient for the match start
-            // This ensures the network fee doesn't eat your whole remaining 1.0 LCAI
+            gasLimit: 800000, 
             maxPriorityFeePerGas: ethers.parseUnits("1", "gwei"), 
             maxFeePerGas: ethers.parseUnits("2", "gwei")
         });
         await tx.wait();
         gameStatus.innerText = "Game Live! Your Move (White)";
 
-        // Hide the setup area
         document.getElementById('setup-area').style.display = 'none';
         document.getElementById('game-title').innerText = "Game in Progress";
 
         const boardContainer = document.getElementById('board-container');
         boardContainer.style.display = 'block';
         
-        // Expand the board container
         const boardElement = document.getElementById('myBoard');
-        boardElement.style.width = '90vw'; // 90% of viewport width
-        boardElement.style.maxWidth = '800px'; // Limit maximum size
-
+        boardElement.style.width = '90vw'; 
+        boardElement.style.maxWidth = '800px'; 
         
         initBoard();
         setTimeout(() => {
@@ -222,18 +197,14 @@ async function checkActiveGame(address) {
     if (!contract) return;
 
     try {
-        // Fetch match data from Lightchain
         const gameData = await contract.matches(address);
         
-        // In Solidity, your Match struct has 'isActive'
         if (gameData && gameData.isActive) {
             console.log("Active game found, resuming...");
             
-            // 1. Hide the entry UI
             const setupArea = document.getElementById('setup-area');
             if (setupArea) setupArea.style.display = 'none';
             
-            // 2. Show the Board Container
             const boardContainer = document.getElementById('board-container');
             boardContainer.style.display = 'block';
 
@@ -241,10 +212,8 @@ async function checkActiveGame(address) {
                 board.resize(); 
             }
 
-            // 3. Sync the JS game state with the Contract FEN
             game = new Chess(gameData.currentFEN);
             
-            // 4. Initialize the visual board
             if (!board) {
                 initBoard(); 
             }
@@ -259,38 +228,9 @@ async function checkActiveGame(address) {
     }
 }
 
-function resumeGame(fen) {
-    // Show the board container
-    document.getElementById('board-container').style.display = 'block';
-    
-    // Initialize or Update Board
-    if (!board) {
-        board = Chessboard('myBoard', {
-            draggable: true,
-            position: fen,
-            onDrop: handleMove // Your existing move logic
-        });
-    } else {
-        board.position(fen);
-    }
-    game.load(fen);
-}
-
-
 function initBoard() {
-    const config = {
-        draggable: true,
-        position: 'start',
-        pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png', 
-        onDragStart: onDragStart,
-        onDrop: onDrop,
-        onSnapEnd: onSnapEnd
-    };
-    board = Chessboard('myBoard', config);
+    board = Chessboard('myBoard', boardConfig);
 }
-
-//var game = new Chess();
-
 
 async function onDrop(source, target) {
     const move = game.move({
@@ -302,35 +242,28 @@ async function onDrop(source, target) {
     if (move === null) return 'snapback';
 
     if (typeof saveGameState === 'function') {
-            saveGameState();
+        saveGameState();
     } else {
-            localStorage.setItem('lcai_chess_pgn', game.pgn());
+        localStorage.setItem('lcai_chess_pgn', game.pgn());
     }
-        
 
     try {
-        // 1. Submit to Blockchain FIRST
-        //const tx = await contract.submitMove(move.from + move.to);
-        //await tx.wait(); 
-
         gameStatus.innerText = "AIVM is thinking...";
 
-        // 2. Call Relayer (Wrapped in a try/catch so it doesn't break the game)
-        try {
-            const response = await fetch('/api/relayer', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    playerAddress: userAddress, 
-                    move: move.from + move.to
-                })
-            });
-            
-            // Check if response is actually JSON
-        const data = await response.json(); // Read it EXACTLY once
+        // 🟢 FIX: Updated the payload to send BOTH moveObj and moveString
+        const response = await fetch('/api/relayer', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                playerAddress: userAddress, 
+                moveObj: { from: source, to: target, promotion: 'q' }, // For chess.js validation
+                moveString: move.from + move.to // For the blockchain contract
+            })
+        });
+        
+        const data = await response.json(); 
     
         if (response.ok && data.success) {
-            // AI moved successfully
             game.load(data.newFEN);
             board.position(data.newFEN);
             localStorage.setItem('lcai_chess_pgn', game.pgn());
@@ -338,63 +271,26 @@ async function onDrop(source, target) {
         } else {
             throw new Error(data.error || "Relayer failed to process move");
         }
-        } catch (relayerErr) {
-            console.error("Relayer Error:", relayerErr);
-            game.undo();
-            board.position(game.fen());
-            gameStatus.innerText = "Move failed: " + relayerErr.message;
-        }
-
-        // 3. Fallback to polling the contract for the AIVM move
-        requestAIVMMove();
-
-    } catch (error) {
-        console.error("Move failed:", error);
+    } catch (relayerErr) {
+        console.error("Relayer Error:", relayerErr);
         game.undo();
         board.position(game.fen());
-        gameStatus.innerText = "Transaction failed. Check your LCAI balance.";
+        gameStatus.innerText = "Move failed: " + relayerErr.message;
         return 'snapback';
     }
-    //submitMoveToContract(move.san);
 }
 
-// Add this logic to your configuration
 function onDragStart(source, piece, position, orientation) {
-    // 1. Block moves if the game is over
     if (game.game_over()) return false;
-
-    // 2. Block moves if it is not your turn (AIVM is 'b')
     if (game.turn() === 'b') {
         console.warn("Wait for AIVM to move...");
         return false;
     }
-
-    // 3. Only allow picking up White pieces
     if (piece.search(/^b/) !== -1) return false;
 }
 
-// Ensure the board stays in sync after animations
 function onSnapEnd() {
     board.position(game.fen());
-}
-
-async function requestAIVMMove() {
-    try {
-        // Poll the contract/AIVM for the new FEN
-        // This ensures the board updates only when the AIVM has actually processed
-        const matchData = await contract.matches(userAddress);
-        
-        if (matchData.currentFEN !== game.fen()) {
-            game.load(matchData.currentFEN);
-            board.position(game.fen());
-            document.getElementById('game-status').innerText = "Your Turn!";
-        } else {
-            // Still thinking? Poll again in 3 seconds
-            setTimeout(requestAIVMMove, 3000);
-        }
-    } catch (e) {
-        console.error("AIVM Sync Error:", e);
-    }
 }
 
 function resetGame() {
@@ -405,26 +301,14 @@ function resetGame() {
     }
 }
 
-document.getElementById('reset-board-btn').addEventListener('click', () => {
-    if (userAddress) {
-        checkActiveGame(userAddress);
-    }
-});
-
-// --- 5. Event Listeners ---
-//connectBtn.addEventListener('click', connectWallet);
-document.getElementById('adminWithdrawBtn').addEventListener('click', adminWithdraw);
-//document.getElementById('startGameBtn').addEventListener('click', startMatch);
-//document.addEventListener('DOMContentLoaded', () => {
-// --- 3. Fix the Event Listeners at the bottom of app.js ---
 window.onload = () => {
     const startBtn = document.getElementById('start-btn');
-    const resetBtn = document.getElementById('reset-btn'); // New
+    const resetBtn = document.getElementById('reset-btn'); 
     const connectBtn = document.getElementById('connect-btn');
     const withdrawBtn = document.getElementById('adminWithdrawBtn');
 
     if (startBtn) startBtn.addEventListener('click', startMatch);
-    if (resetBtn) resetBtn.addEventListener('click', resetGame); // New
+    if (resetBtn) resetBtn.addEventListener('click', resetGame); 
     if (connectBtn) connectBtn.addEventListener('click', connectWallet);
     if (withdrawBtn) withdrawBtn.addEventListener('click', adminWithdraw);
 };
