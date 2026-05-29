@@ -2,29 +2,35 @@ import { ethers } from 'ethers';
 import { Chess } from 'chess.js';
 
 export default async function handler(req, res) {
+    // 1. ADD CORS HEADERS (Fixes "fetch failed" / CORS blocks)
+    res.setHeader('Access-Control-Allow-Credentials', true);
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+    res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-Type, Date, X-Api-Version, Authorization');
+
+    if (req.method === 'OPTIONS') return res.status(200).end();
     if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
-    // Safety Shield: Check if body exists
+
+    // 2. SAFETY SHIELD
     if (!req.body || !req.body.moveObj) {
-        return res.status(400).json({ success: false, error: "Missing moveObj in request body" });
+        return res.status(400).json({ success: false, error: "Missing moveObj" });
     }
 
     try {
         const { playerAddress, moveObj, moveString } = req.body;
-    const RPC_URL = process.env.LIGHTCHAIN_RPC_URL || "https://rpc.testnet.lightchain.ai";
-    const CONTRACT_ADDRESS = "0xD4c213Fe046fe72Aa456b18B7b4b39A630fE7B17";
+        const RPC_URL = process.env.LIGHTCHAIN_RPC_URL || "https://rpc.testnet.lightchain.ai";
+        const CONTRACT_ADDRESS = "0xD4c213Fe046fe72Aa456b18B7b4b39A630fE7B17";
 
-// 1. HARDENED RPC HANDSHAKE
+        // 3. RPC HEALTH CHECK
         const healthCheck = await fetch(RPC_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ jsonrpc: "2.0", method: "eth_blockNumber", params: [], id: 1 })
         });
 
-        if (!healthCheck.ok) {
-            return res.status(502).json({ success: false, error: "Lightchain RPC unreachable." });
-        }
+        if (!healthCheck.ok) throw new Error("Lightchain RPC unreachable (502/503)");
 
-        // 2. INITIALIZE ETHERS WITH STATIC NETWORK
+        // 4. INITIALIZE ETHERS
         const network = ethers.Network.from(8200);
         const provider = new ethers.JsonRpcProvider(RPC_URL, network, { staticNetwork: true });
         const relayerWallet = new ethers.Wallet(process.env.RELAYER_PRIVATE_KEY, provider);
@@ -33,17 +39,14 @@ export default async function handler(req, res) {
             "function matches(address player) view returns (uint256, uint256, string, string, uint256, uint256, bool)"
         ], relayerWallet);
 
-        // 3. RESTORE STATE FROM CHAIN
+        // 5. RESTORE STATE
         const gameData = await contract.matches(playerAddress);
-        if (!gameData || !gameData[6]) return res.status(400).json({ error: "No active game on-chain." });
+        if (!gameData || !gameData[6]) throw new Error("No active game on-chain.");
 
-        const game = new Chess(gameData[2]); // gameData[2] is currentFEN
+        const game = new Chess(gameData[2]);
+        if (!game.move(moveObj)) throw new Error("Invalid move for current state.");
 
-        // 4. VALIDATE & PROCESS MOVE
-        const userMoveResult = game.move(moveObj);
-        if (!userMoveResult) return res.status(400).json({ error: "Invalid move." });
-
-        // 5. AIVM INFERENCE
+        // 6. AIVM INFERENCE
         const aiRes = await fetch('https://api.lightchain.ai/v1/chat/completions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${playerAddress}` },
@@ -57,16 +60,16 @@ export default async function handler(req, res) {
         const aiData = await aiRes.json();
         const aiMoveString = aiData.choices[0].message.content.trim().toLowerCase().replace(/[^a-h1-8q]/g, '');
 
-        if (!game.move(aiMoveString, { sloppy: true })) throw new Error("AIVM returned illegal move");
+        if (!game.move(aiMoveString, { sloppy: true })) throw new Error("AIVM illegal move");
 
-        // 6. COMMIT TO CHAIN
+        // 7. SUBMIT
         const tx = await contract.submitMove(playerAddress, moveString);
         await tx.wait();
 
-        res.status(200).json({ success: true, newFEN: game.fen(), gameOver: game.game_over() });
+        return res.status(200).json({ success: true, newFEN: game.fen(), gameOver: game.game_over() });
 
     } catch (err) {
-        // This will now capture the EXACT crash reason and send it to your browser
-        return res.status(500).json({ success: false, crashReport: err.message, stack: err.stack });
+        console.error("CRASH REPORT:", err);
+        return res.status(500).json({ success: false, crashReport: err.message });
     }
 }
