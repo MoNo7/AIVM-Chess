@@ -355,7 +355,7 @@ async function onDrop(source, target) {
         gameStatus.innerText = "Transaction failed. Check your LCAI balance.";
         return 'snapback';
     }
-    submitMoveToContract(move.san);
+    //submitMoveToContract(move.san);
 }
 
 // Add this logic to your configuration
