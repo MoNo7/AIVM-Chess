@@ -289,7 +289,7 @@ function initBoard() {
     board = Chessboard('myBoard', config);
 }
 
-var game = new Chess();
+//var game = new Chess();
 
 
 async function onDrop(source, target) {
