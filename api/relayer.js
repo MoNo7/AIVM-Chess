@@ -3,13 +3,17 @@ import { Chess } from 'chess.js';
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
-    
-    const { playerAddress, moveObj, moveString } = req.body;
+    // Safety Shield: Check if body exists
+    if (!req.body || !req.body.moveObj) {
+        return res.status(400).json({ success: false, error: "Missing moveObj in request body" });
+    }
+
+    try {
+        const { playerAddress, moveObj, moveString } = req.body;
     const RPC_URL = process.env.LIGHTCHAIN_RPC_URL || "https://rpc.testnet.lightchain.ai";
     const CONTRACT_ADDRESS = "0xD4c213Fe046fe72Aa456b18B7b4b39A630fE7B17";
 
-    try {
-        // 1. HARDENED RPC HANDSHAKE
+// 1. HARDENED RPC HANDSHAKE
         const healthCheck = await fetch(RPC_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -61,8 +65,8 @@ export default async function handler(req, res) {
 
         res.status(200).json({ success: true, newFEN: game.fen(), gameOver: game.game_over() });
 
-    } catch (error) {
-        console.error("Relayer Error:", error.message);
-        res.status(500).json({ success: false, error: error.message });
+    } catch (err) {
+        // This will now capture the EXACT crash reason and send it to your browser
+        return res.status(500).json({ success: false, crashReport: err.message, stack: err.stack });
     }
 }
