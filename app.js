@@ -26,7 +26,7 @@ const boardConfig = {
 };
 
 // --- Core Elements ---
-const connectBtn = document.getElementById('connectWalletBtn');
+const connectBtn = document.getElementById('connect-btn');
 const walletDisplay = document.getElementById('wallet-address');
 const adminPanel = document.getElementById('admin-panel');
 const gameControls = document.getElementById('game-controls');
@@ -301,7 +301,12 @@ async function onDrop(source, target) {
 
     if (move === null) return 'snapback';
 
-    gameStatus.innerText = "Confirming move on Lightchain...";
+    if (typeof saveGameState === 'function') {
+            saveGameState();
+    } else {
+            localStorage.setItem('lcai_chess_pgn', game.pgn());
+    }
+        
 
     try {
         // 1. Submit to Blockchain FIRST
@@ -317,7 +322,7 @@ async function onDrop(source, target) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     playerAddress: userAddress, 
-                    move: { from: source, to: target } 
+                    move: move.from + move.to
                 })
             });
             
@@ -328,6 +333,7 @@ async function onDrop(source, target) {
             // AI moved successfully
             game.load(data.newFEN);
             board.position(data.newFEN);
+            localStorage.setItem('lcai_chess_pgn', game.pgn());
             gameStatus.innerText = data.gameOver ? "Game Over!" : "AIVM Moved. Your Turn!";
         } else {
             throw new Error(data.error || "Relayer failed to process move");
