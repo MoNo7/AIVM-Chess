@@ -242,6 +242,7 @@ async function onDrop(source, target) {
 
     if (move === null) return 'snapback';
 
+    // Save local state
     if (typeof saveGameState === 'function') {
         saveGameState();
     } else {
@@ -249,34 +250,45 @@ async function onDrop(source, target) {
     }
 
     try {
-        gameStatus.innerText = "AIVM is thinking...";
+        // 1. Update UI for the wallet prompt
+        gameStatus.innerText = "Anchoring move... Please confirm in your wallet.";
+        const moveString = move.from + move.to; // e.g., "e2e4"
 
-        // 🟢 FIX: Updated the payload to send BOTH moveObj and moveString
-        const response = await fetch('/api/relayer', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                playerAddress: userAddress, 
-                moveObj: { from: source, to: target, promotion: 'q' }, // For chess.js validation
-                moveString: move.from + move.to // For the blockchain contract
-            })
-        });
+        // 2. Call the smart contract directly
+        // Note: 'contract' must be initialized with a Web3Provider (MetaMask) signer
+        const tx = await contract.requestMove(game.fen(), moveString);
         
-        const data = await response.json(); 
-    
-        if (response.ok && data.success) {
-            game.load(data.newFEN);
-            board.position(data.newFEN);
-            localStorage.setItem('lcai_chess_pgn', game.pgn());
-            gameStatus.innerText = data.gameOver ? "Game Over!" : "AIVM Moved. Your Turn!";
-        } else {
-            throw new Error(data.error || "Relayer failed to process move");
-        }
-    } catch (relayerErr) {
-        console.error("Relayer Error:", relayerErr);
+        gameStatus.innerText = "Transaction pending... waiting for block inclusion.";
+        
+        // 3. Wait for the transaction to be mined
+        await tx.wait(); 
+
+        // 4. Wait for the AIVM to process the PoI
+        gameStatus.innerText = "AIVM Validators Verifying Move... Please wait.";
+
+        // --- NEW REQUIRED LOGIC: POLLING FOR FINALIZATION ---
+        // Because the AIVM takes time, we have to poll the contract 
+        // to see if the move was validated and the new FEN is ready.
+        
+        const newFEN = await pollForFinalizedMove(userAddress); 
+        
+        // 5. Update the board with the AIVM's response
+        game.load(newFEN);
+        board.position(newFEN);
+        localStorage.setItem('lcai_chess_pgn', game.pgn());
+        gameStatus.innerText = game.game_over() ? "Game Over!" : "AIVM Moved. Your Turn!";
+
+    } catch (error) {
+        console.error("Blockchain Error:", error);
         game.undo();
         board.position(game.fen());
-        gameStatus.innerText = "Move failed: " + relayerErr.message;
+        
+        // Handle user rejection in MetaMask gracefully
+        if (error.code === 'ACTION_REJECTED') {
+            gameStatus.innerText = "Move cancelled in wallet.";
+        } else {
+            gameStatus.innerText = "Move failed: " + (error.reason || error.message);
+        }
         return 'snapback';
     }
 }
