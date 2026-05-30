@@ -22,7 +22,7 @@ export default async function handler(req, res) {
         // Ensure environment variables are loaded
         const RPC_URL = process.env.LIGHTCHAIN_RPC_URL || "https://rpc.testnet.lightchain.ai";
         const PRIVATE_KEY = process.env.RELAYER_PRIVATE_KEY;
-        const CONTRACT_ADDRESS = "0xD4c213Fe046fe72Aa456b18B7b4b39A630fE7B17";
+        const CONTRACT_ADDRESS = "0x11a2E85933afc49f9e2A2629622629005e0B0299";
 
         if (!PRIVATE_KEY) throw new Error("Server Configuration Error: Missing Private Key");
 
