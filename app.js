@@ -12,6 +12,63 @@ const CONTRACT_ABI = [
     "event MoveValidated(bytes32 indexed taskId, string move)"
 ];
 
+const INFERENCE_ABI = [
+    "function getTaskStatus(bytes32 taskId) external view returns (bytes32 resultHash, bool finalized)"
+];
+const INFERENCE_ADDRESS = "0x1856AEf777F9859F71D7Be24d9F7831bf42ec708";
+
+async function pollForFinalizedMove(playerAddr) {
+    gameStatus.innerText = "Getting AI response... (1/2)";
+    
+    // 1. Fetch the exact FEN from the AI using the legacy API path
+    const aiRes = await fetch('https://api.testnet.lightchain.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            model: "Neural-Llama-3-70B",
+            messages: [
+                { role: "system", content: "You are a chess referee. Only output the valid next FEN string." },
+                { role: "user", content: `Current FEN: ${game.fen()}` }
+            ],
+            temperature: 0.1
+        })
+    });
+    
+    if (!aiRes.ok) throw new Error("Failed to get response from AIVM API");
+    const aiData = await aiRes.json();
+    const newFEN = aiData.choices[0].message.content.trim();
+
+    // 2. Poll the PoI network until the validators sign off
+    gameStatus.innerText = "Waiting for Validators to confirm... (2/2)";
+    const taskId = await contract.playerLastTaskId(playerAddr);
+    const inferenceContract = new ethers.Contract(INFERENCE_ADDRESS, INFERENCE_ABI, provider);
+
+    let finalized = false;
+    for (let i = 0; i < 30; i++) { // Poll for up to 2 minutes
+        try {
+            const status = await inferenceContract.getTaskStatus(taskId);
+            if (status.finalized) {
+                finalized = true;
+                break;
+            }
+        } catch (e) { 
+            console.warn("Polling for status..."); 
+        }
+        await new Promise(r => setTimeout(r, 4000)); // Wait 4 seconds between checks
+    }
+
+    if (!finalized) throw new Error("PoI Network timeout. Move not finalized.");
+
+    // 3. Prompt user to finalize the move on-chain
+    gameStatus.innerText = "Move Validated! Please confirm Finalization in wallet.";
+    
+    // This requires a second MetaMask signature to update the contract state
+    const tx = await contract.verifyAndExecuteMove(taskId, newFEN);
+    await tx.wait();
+
+    return newFEN;
+}
+
 let provider, signer, contract;
 let userAddress = "";
 let game = new Chess();
