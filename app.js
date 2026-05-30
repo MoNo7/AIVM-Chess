@@ -1,14 +1,15 @@
 // --- Configuration ---
 const OWNER_ADDRESS = "0x4D36B31d4BFB957A5D816B0f420a9e755EFc6a2c";
-const CONTRACT_ADDRESS = "0xD4c213Fe046fe72Aa456b18B7b4b39A630fE7B17";
+const CONTRACT_ADDRESS = "0x11a2E85933afc49f9e2A2629622629005e0B0299";
 const CONTRACT_ABI = [
     "function protocolOwner() view returns (address)",
-    "function lockedVaultFunds() view returns (uint256)",
-    "function manualWithdraw(uint256 amount) external",
-    "function activeGamesCount() view returns (uint8)",
-    "function submitMove(string move) external", 
-    "function matches(address) view returns (uint256 wager, uint256 gasRemaining, string currentFEN, string currentPGN, uint256 moveCount, uint256 lastMoveTimestamp, bool isActive)",
-    "function startMatch(string move) external payable"
+    "function startMatch(string initialFEN) external payable",
+    "function requestMove(string fen, string move) external",
+    "function verifyAndExecuteMove(bytes32 taskId, string newFEN) external",
+    "function playerLastTaskId(address) view returns (bytes32)",
+    "function matches(address) view returns (uint256 wager, string currentFEN, uint256 startTime, bool active)",
+    "function completeMatch(address payable player, bool playerWon) external",
+    "event MoveValidated(bytes32 indexed taskId, string move)"
 ];
 
 let provider, signer, contract;
