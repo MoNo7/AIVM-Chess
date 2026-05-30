@@ -57,7 +57,7 @@ export default async function handler(req, res) {
 
         // 6. AIVM INFERENCE (Anchored Logic)
         // Note: Ensure AIVM_ENDPOINT is defined in Vercel env if api.lightchain.ai fails
-        const AIVM_API = process.env.AIVM_ENDPOINT || 'https://api.lightchain.ai/v1/chat/completions';
+        const AIVM_API = process.env.AIVM_ENDPOINT || 'https://api.testnet.lightchain.ai/';
         
         const aiRes = await fetch(AIVM_API, {
             method: 'POST',
