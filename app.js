@@ -220,11 +220,10 @@ async function checkActiveGame(address) {
             }
             gameStatus.innerText = gameData.isPlayerTurn ? "Game Resumed! Your Turn." : "Game Resumed! Awaiting AI...";
         } else {
-            // --- CASE 2: No active game (The missing part) ---
-            console.log("No active game. Ready to start.");
+            console.log("No active game. Hiding board.");
             setupArea.style.display = 'block';
-            boardContainer.style.display = 'none';
-            gameStatus.innerText = "Ready to start a new match.";
+            boardContainer.style.display = 'none'; // THIS IS CRITICAL
+            document.getElementById('game-status').innerText = "Ready to start a new match.";
         }
     } catch (e) {
         console.error("Error checking game state:", e);
@@ -335,9 +334,21 @@ function onSnapEnd() {
 
 function resetGame() {
     if (confirm("Reset the local board? This won't cancel an on-chain match.")) {
-        game = new Chess();
-        if (board) board.start();
+        // 1. Reset the logic engine
+        game = new Chess(); 
+        
+        // 2. Clear the UI
+        document.getElementById('board-container').style.display = 'none';
+        document.getElementById('setup-area').style.display = 'block';
         document.getElementById('game-status').innerText = "Board Reset. Ready to Start.";
+        
+        // 3. Clear local storage so it doesn't try to resume
+        localStorage.removeItem('lcai_chess_pgn');
+        
+        // 4. Force a fresh board instance if it exists
+        if (board) {
+            board.clear();
+        }
     }
 }
 
