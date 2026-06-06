@@ -49,16 +49,15 @@ export default async function handler(req, res) {
     
             const tx = await contract.submitAIMove(playerAddress, game.fen(), game.pgn());
             
-    
             // 5. RESTORE STATE FROM ON-CHAIN
             const gameData = await contract.matches(playerAddress);
-            if (!gameData || !gameData[6]) throw new Error("No active game found for this address on-chain.");
+            if (!gameData || !gameData[6]) throw new Error("No active game found.");
     
             const game = new Chess(gameData[2]); // gameData[2] is currentFEN
             
             // Validate local move against on-chain FEN
             if (!game.move(moveObj)) {
-                throw new Error(`Invalid move: ${moveString} is not allowed from current FEN: ${gameData[2]}`);
+                throw new Error(`Invalid move: ${moveString}`);
             }
     
             // 6. AIVM INFERENCE (Anchored Logic)
