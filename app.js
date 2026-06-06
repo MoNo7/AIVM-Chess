@@ -73,7 +73,7 @@ async function connectWallet() {
                     board.resize();
                 }
             }
-            checkActiveGame(userAddress);
+            //checkActiveGame(userAddress);
             refreshVaultStats(); 
         }
     } catch (error) {
@@ -213,7 +213,11 @@ async function checkActiveGame(address) {
             
             game.load(gameData.currentFEN);
             board.position(gameData.currentFEN);
-            
+            if (board) {
+                board.resize();
+            } else {
+                initBoard();
+            }
             gameStatus.innerText = gameData.isPlayerTurn ? "Game Resumed! Your Turn." : "Game Resumed! Awaiting AI...";
         } else {
             // --- CASE 2: No active game (The missing part) ---
