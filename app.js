@@ -256,15 +256,9 @@ async function onDrop(source, target) {
     localStorage.setItem('lcai_chess_pgn', game.pgn());
 
     try {
-        gameStatus.innerText = "Anchoring move to blockchain Referee...";
+        gameStatus.innerText = "Processing automated AIVM opponent move via Lightchain RPC...";
         
-        // Anchoring human turn state parameters to the contract
-        const tx = await contract.playPlayerMove(game.fen(), game.pgn());
-        gameStatus.innerText = "Awaiting block verification...";
-        await tx.wait();
-
-        gameStatus.innerText = "Processing AIVM opponent countermove via Lightchain RPC...";
-        
+        // Post directly to your relayer to calculate the AI move and settle state simultaneously
         const response = await fetch('/api/relayer', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -284,6 +278,10 @@ async function onDrop(source, target) {
         const data = await response.json();
         if (!data.success) throw new Error(data.crashReport);
         
+        // Sync local board position with data returned from the relayer orchestration
+        game.load(data.newFEN);
+        board.position(data.newFEN);
+        
         localStorage.setItem('lcai_chess_pgn', game.pgn());
         gameStatus.innerText = game.game_over() ? "Game Over!" : "AIVM Processing Complete. Your Turn!";
 
@@ -291,11 +289,7 @@ async function onDrop(source, target) {
         console.error("Core Error:", error);
         game.undo();
         board.position(game.fen());
-        if (error.code === 'ACTION_REJECTED') {
-            gameStatus.innerText = "Move execution cancelled in wallet.";
-        } else {
-            gameStatus.innerText = "Move tracking failed: " + (error.reason || error.message);
-        }
+        gameStatus.innerText = "Move failed: " + (error.reason || error.message);
         return 'snapback';
     }
 }
