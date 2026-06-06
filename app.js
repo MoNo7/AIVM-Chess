@@ -178,11 +178,11 @@ async function updateVaultDisplay() {
 async function checkVaultLiquidity(userBet) {
     const vaultBalance = await provider.getBalance(CONTRACT_ADDRESS);
     const vaultLCAI = parseFloat(ethers.formatEther(vaultBalance));
-    const requiredAmount = parseFloat(userBet) + 55.0;
+    const requiredAmount = parseFloat(userBet) + 50.5;
     const warningElement = document.getElementById('bet-warning');
     
     if (requiredAmount > vaultLCAI) {
-        warningElement.innerText = `⚠️ Bet too large. Max allowed: ${(vaultLCAI - 55).toFixed(2)} LCAI`;
+        warningElement.innerText = `⚠️ Bet too large. Max allowed: ${(vaultLCAI - 50.5).toFixed(2)} LCAI`;
         document.getElementById('start-btn').disabled = true;
     } else {
         warningElement.innerText = "";
@@ -220,7 +220,7 @@ async function startMatch() {
     if (betInput < 0) return alert("Bet cannot be negative.");
     try {
         const betWei = ethers.parseEther(betInput);
-        const gasReserveWei = ethers.parseEther("55.0"); 
+        const gasReserveWei = ethers.parseEther("50.5"); 
         const totalValue = betWei + gasReserveWei;
         gameStatus.innerText = "Estimating gas...";
         gameStatus.innerText = "Confirming Transaction...";
