@@ -5,33 +5,46 @@ export default async function handler(req, res) {
 
     const { playerAddress } = req.body;
     const RPC_URL = process.env.LIGHTCHAIN_RPC_URL || "https://rpc.testnet.lightchain.ai";
+    const PRIVATE_KEY = process.env.RELAYER_PRIVATE_KEY;
+    const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS;
 
     try {
         const provider = new ethers.JsonRpcProvider(RPC_URL);
+        const relayerWallet = new ethers.Wallet(PRIVATE_KEY, provider);
         
-        // 1. Get the match data and the latest TaskID from the contract
-        const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, [
-            "function matches(address) view returns (uint256, uint256, string, string, uint256, uint256, bool, bool)",
-            "function playerLastTaskId(address) view returns (bytes32)"
-        ], provider);
-        
-        const taskId = await contract.playerLastTaskId(playerAddress);
+        const contract = new ethers.Contract(CONTRACT_ADDRESS, [
+            "function playerLastTaskId(address) view returns (bytes32)",
+            "function submitAIMove(address player, string newFEN, string newPGN) external"
+        ], relayerWallet);
 
-        // 2. Poll the native AIVM status using the supported method
-        const status = await provider.send("lcai_getInferenceStatus", [taskId]);
-        
-        if (status.status !== "finalized") {
+        // 1. Get the TaskID from the contract
+        const taskId = await contract.playerLastTaskId(playerAddress);
+        if (taskId === "0x0000000000000000000000000000000000000000000000000000000000000000") {
+            return res.status(400).json({ success: false, message: "No active task found" });
+        }
+
+        // 2. Poll the REST Inference API instead of RPC
+        // Replace this URL with your specific region's AIVM REST endpoint if necessary
+        const statusResponse = await fetch(`https://api.testnet.lightchain.ai/api/v1/inference/status/${taskId}`);
+        const statusData = await statusResponse.json();
+
+        if (statusData.status !== "finalized") {
             return res.status(202).json({ success: false, message: "AIVM Processing..." });
         }
 
-        // 3. Retrieve the verified output
-        const result = await provider.send("lcai_getInferenceResult", [taskId]);
-        
-        // 4. Return the result to your app.js so it can complete the state transition
-        return res.status(200).json({ success: true, aiMove: result.output });
+        // 3. Get the result
+        const resultResponse = await fetch(`https://api.testnet.lightchain.ai/api/v1/inference/result/${taskId}`);
+        const resultData = await resultResponse.json();
+
+        // 4. Submit move to chain
+        // Note: resultData.output is expected to be your new FEN/PGN string
+        const tx = await contract.submitAIMove(playerAddress, resultData.output, "AI Move");
+        await tx.wait();
+
+        return res.status(200).json({ success: true, newFEN: resultData.output });
 
     } catch (err) {
-        console.error("Relayer error:", err);
+        console.error("Relayer Error:", err);
         return res.status(500).json({ success: false, crashReport: err.message });
     }
 }
