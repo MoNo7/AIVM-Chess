@@ -2,6 +2,8 @@ import { ethers } from 'ethers';
 import { Chess } from 'chess.js';
 
 export default async function handler(req, res) {
+    console.log("RELAYER_LOG: Request received:", req.method); 
+    
     // 1. ADD CORS HEADERS
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*');
