@@ -343,7 +343,7 @@ async function onDrop(source, target) {
         // Because the AIVM takes time, we have to poll the contract 
         // to see if the move was validated and the new FEN is ready.
         
-        const newFEN = await pollForFinalizedMove(userAddress); 
+        //const newFEN = await pollForFinalizedMove(userAddress); 
         
         // 5. Update the board with the AIVM's response
         game.load(newFEN);
