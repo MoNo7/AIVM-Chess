@@ -61,17 +61,16 @@ input {
 
 #board-container {
     display: none;
-    width: 100vw;
+    width: 100%;
+    max-width: 600px;
     height: 100vh;
-    display: flex;
+    margin: 0 auto;
     justify-content: center;
     align-items: center;
 }
 
 #myBoard {
-    width: 80vmin !important; /* Forces the board to be 80% of the smaller dimension */
-    height: 80vmin !important;
-    margin: 0 auto;
+    width: 100% !important; /* Forces the board to be 80% of the smaller dimension */
 }
 
 /* Ensure the board stays sharp when resized */
