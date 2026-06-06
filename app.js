@@ -360,6 +360,12 @@ async function onDrop(source, target) {
                 moveString: move.from + move.to
             })
         });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error("Server returned error:", errorText);
+            throw new Error("Server error: " + errorText);
+        }
         
         const data = await response.json();
         if (!data.success) throw new Error(data.crashReport);
