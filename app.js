@@ -66,11 +66,13 @@ async function connectWallet() {
             if (gameControls) gameControls.style.display = 'block';
 
             if (!board) {
-                board = Chessboard('myBoard', boardConfig);
+                initBoard();
             } else {
-                board.resize();
+                // Only resize if the container is currently visible
+                if (document.getElementById('myBoard').offsetParent !== null) {
+                    board.resize();
+                }
             }
-
             checkActiveGame(userAddress);
             refreshVaultStats(); 
         }
