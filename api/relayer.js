@@ -40,9 +40,11 @@ export default async function handler(req, res) {
         const provider = new ethers.JsonRpcProvider(RPC_URL, network, { staticNetwork: true });
         const relayerWallet = new ethers.Wallet(PRIVATE_KEY, provider);
         const contract = new ethers.Contract(CONTRACT_ADDRESS, [
-            "function submitMove(address player, string move) external",
+            "function submitAIMove(address player, string newFEN, string newPGN) external",
             "function matches(address player) view returns (uint256, uint256, string, string, uint256, uint256, bool)"
         ], relayerWallet);
+
+        const tx = await contract.submitAIMove(playerAddress, game.fen(), game.pgn());
 
         // 5. RESTORE STATE FROM ON-CHAIN
         const gameData = await contract.matches(playerAddress);
