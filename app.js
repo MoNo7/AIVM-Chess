@@ -5,6 +5,8 @@ const CONTRACT_ABI = [
     "function protocolOwner() view returns (address)",
     "function startMatch(string initialFEN) external payable",
     "function requestMove(string fen, string move) external",
+    "function playPlayerMove(string fen, string pgn) external",
+    "function submitAIMove(string newFEN, string move) external",
     "function verifyAndExecuteMove(bytes32 taskId, string newFEN) external",
     "function playerLastTaskId(address) view returns (bytes32)",
     "function matches(address) view returns (uint256 wager, string currentFEN, uint256 startTime, bool active)",
@@ -270,12 +272,14 @@ async function checkActiveGame(address) {
                 board.resize(); 
             }
 
-            game = new Chess(gameData.currentFEN);
+            const contractFEN = gameData.currentFEN;
+
+            game = new Chess(contractFEN);
             
             if (!board) {
                 initBoard(); 
             }
-            const contractFEN = gameData[2]; 
+
             board.position(contractFEN);
             game.load(contractFEN);
             
