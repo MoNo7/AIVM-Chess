@@ -47,7 +47,7 @@ export default async function handler(req, res) {
                 "function matches(address player) view returns (uint256, uint256, string, string, uint256, uint256, bool)"
             ], relayerWallet);
     
-            const tx = await contract.submitAIMove(playerAddress, game.fen(), game.pgn());
+           // const tx = await contract.submitAIMove(playerAddress, game.fen(), game.pgn());
             
             // 5. RESTORE STATE FROM ON-CHAIN
             const gameData = await contract.matches(playerAddress);
