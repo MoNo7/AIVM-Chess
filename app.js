@@ -275,12 +275,14 @@ async function checkActiveGame(address) {
             game = new Chess(contractFEN);
             
             if (!board) initBoard();
-            board.position(contractFEN);
-            game.load(contractFEN);
+            game.load(gameData.currentFEN); 
+            board.position(gameData.currentFEN);
             if (gameData.isPlayerTurn) {
                 document.getElementById('game-status').innerText = "Game Resumed! Your Turn.";
             } else {
                 document.getElementById('game-status').innerText = "Game Resumed! Awaiting AI...";
+                board.destroy(); // Simple way to lock the board
+                initBoard();
             }
         }
     } catch (e) {
