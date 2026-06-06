@@ -291,17 +291,31 @@ async function checkActiveGame(address) {
 }
 
 async function refreshGameState() {
-    if (!userAddress) return;
-    const gameData = await contract.matches(userAddress);
-    if (gameData.currentFEN !== game.fen()) {
-        game.load(gameData.currentFEN);
-        board.position(gameData.currentFEN);
-        gameStatus.innerText = gameData.isPlayerTurn ? "Your Turn!" : "Awaiting AI...";
+    if (!userAddress || !contract) return;
+    
+    try {
+        const gameData = await contract.matches(userAddress);
+        
+        // If the game is no longer active, stop the interval!
+        if (!gameData.active) {
+            clearInterval(refreshInterval);
+            gameStatus.innerText = "Game ended or no active match.";
+            return;
+        }
+
+        if (gameData.currentFEN !== game.fen()) {
+            game.load(gameData.currentFEN);
+            board.position(gameData.currentFEN);
+            gameStatus.innerText = gameData.isPlayerTurn ? "Your Turn!" : "Awaiting AI...";
+        }
+    } catch (e) {
+        console.error("Refresh loop stopped:", e);
+        clearInterval(refreshInterval);
     }
 }
 
 // Call this every 5 seconds so the board updates when the Relayer finishes
-setInterval(refreshGameState, 5000);
+let refreshInterval = setInterval(refreshGameState, 5000);
 
 function initBoard() {
     board = Chessboard('myBoard', boardConfig);
