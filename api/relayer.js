@@ -45,6 +45,7 @@ export default async function handler(req, res) {
         ], relayerWallet);
 
         const tx = await contract.submitAIMove(playerAddress, game.fen(), game.pgn());
+        
 
         // 5. RESTORE STATE FROM ON-CHAIN
         const gameData = await contract.matches(playerAddress);
@@ -81,7 +82,8 @@ export default async function handler(req, res) {
         }
 
         // 7. COMMIT TO CHAIN
-        const tx = await contract.submitMove(playerAddress, moveString);
+        //const tx = await contract.submitAIMove(playerAddress, moveString);
+        const tx = await contract.submitAIMove(playerAddress, game.fen(), game.pgn())
         await tx.wait();
 
         return res.status(200).json({ 
