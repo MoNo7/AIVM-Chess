@@ -190,9 +190,10 @@ async function startMatch() {
         }, 100);
     } catch (error) { alert("Failed to start match."); }
 }
+let isSyncing = false;
 
 async function checkActiveGame(address) {
-    if (!contract) return;
+    if (!contract || isSyncing) return;
     try {
         const gameData = await contract.matches(address);
         const setupArea = document.getElementById('setup-area');
@@ -227,6 +228,8 @@ async function checkActiveGame(address) {
         }
     } catch (e) {
         console.error("Error checking game state:", e);
+    }finally {
+        isSyncing = false; // Release the guard
     }
 }
 
