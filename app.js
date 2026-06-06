@@ -288,6 +288,19 @@ async function checkActiveGame(address) {
     }
 }
 
+async function refreshGameState() {
+    if (!userAddress) return;
+    const gameData = await contract.matches(userAddress);
+    if (gameData.currentFEN !== game.fen()) {
+        game.load(gameData.currentFEN);
+        board.position(gameData.currentFEN);
+        gameStatus.innerText = gameData.isPlayerTurn ? "Your Turn!" : "Awaiting AI...";
+    }
+}
+
+// Call this every 5 seconds so the board updates when the Relayer finishes
+setInterval(refreshGameState, 5000);
+
 function initBoard() {
     board = Chessboard('myBoard', boardConfig);
 }
