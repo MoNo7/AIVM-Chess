@@ -26,7 +26,9 @@ export default async function handler(req, res) {
             const RPC_URL = process.env.LIGHTCHAIN_RPC_URL || "https://rpc.testnet.lightchain.ai";
             const PRIVATE_KEY = process.env.RELAYER_PRIVATE_KEY;
             const CONTRACT_ADDRESS = "0x542280fB7A2d1dBCcF995033809C778F67D9870D";
-            const API_ENDPOINT = "https://chat2.lightchain.ai/v1/chat/completions";
+            
+            // Fixed correct chat2 testnet API endpoint with the /api/ routing prefix included!
+            const API_ENDPOINT = "https://chat2.lightchain.ai/api/v1/chat/completions";
     
             if (!PRIVATE_KEY) throw new Error("Server Configuration Error: Missing Private Key");
     
