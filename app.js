@@ -259,7 +259,7 @@ async function checkActiveGame(address) {
     try {
         const gameData = await contract.matches(address);
         
-        if (gameData && gameData.Active) {
+        if (gameData && gameData.active) {
             console.log("Active game found, resuming...");
             
             const setupArea = document.getElementById('setup-area');
