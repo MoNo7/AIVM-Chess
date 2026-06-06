@@ -256,33 +256,34 @@ async function onDrop(source, target) {
     localStorage.setItem('lcai_chess_pgn', game.pgn());
 
     try {
-        gameStatus.innerText = "Processing automated AIVM opponent move via Lightchain RPC...";
-
+        gameStatus.innerText = "Anchoring move to blockchain Referee...";
+        
+        // 1. Execute the transaction to your smart contract. This starts the native inference query!
         const tx = await contract.playPlayerMove(game.fen(), game.pgn());
         gameStatus.innerText = "Awaiting block confirmation...";
         await tx.wait();
+
+        gameStatus.innerText = "AI Turn Initialized! Checking task status via Relayer...";
         
-        // Post directly to your relayer to calculate the AI move and settle state simultaneously
+        // 2. Alert relayer backend to monitor the resulting task status and settle final boundaries
         const response = await fetch('/api/relayer', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                playerAddress: userAddress,
-                moveObj: move, 
-                moveString: move.from + move.to
+                playerAddress: userAddress
             })
         });
 
         if (!response.ok) {
             const errorText = await response.text();
-            console.error("Relayer execution error:", errorText);
+            console.error("Relayer processing error:", errorText);
             throw new Error("Server error: " + errorText);
         }
         
         const data = await response.json();
         if (!data.success) throw new Error(data.crashReport);
         
-        // Sync local board position with data returned from the relayer orchestration
+        // 3. Update position to match on-chain updates resolved by your contract
         game.load(data.newFEN);
         board.position(data.newFEN);
         
@@ -290,10 +291,17 @@ async function onDrop(source, target) {
         gameStatus.innerText = game.game_over() ? "Game Over!" : "AIVM Processing Complete. Your Turn!";
 
     } catch (error) {
-        console.error("Core Error:", error);
+        console.error("Core Processing Error:", error);
         game.undo();
         board.position(game.fen());
-        gameStatus.innerText = "Move failed: " + (error.reason || error.message);
+        
+        if (error.message.includes("estimateGas")) {
+            gameStatus.innerText = "Move rejected: Revert rule hit. Check if you started a game match first.";
+        } else if (error.code === 'ACTION_REJECTED') {
+            gameStatus.innerText = "Move execution cancelled in wallet.";
+        } else {
+            gameStatus.innerText = "Move tracking failed: " + (error.reason || error.message);
+        }
         return 'snapback';
     }
 }
