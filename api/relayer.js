@@ -25,6 +25,7 @@ export default async function handler(req, res) {
             // Ensure environment variables are loaded
             const RPC_URL = process.env.LIGHTCHAIN_RPC_URL || "https://rpc.testnet.lightchain.ai";
             const PRIVATE_KEY = process.env.RELAYER_PRIVATE_KEY;
+           
             const CONTRACT_ADDRESS = "0x542280fB7A2d1dBCcF995033809C778F67D9870D";
     
             if (!PRIVATE_KEY) throw new Error("Server Configuration Error: Missing Private Key");
@@ -44,7 +45,8 @@ export default async function handler(req, res) {
             const relayerWallet = new ethers.Wallet(PRIVATE_KEY, provider);
             const contract = new ethers.Contract(CONTRACT_ADDRESS, [
                 "function submitAIMove(address player, string newFEN, string newPGN) external",
-                "function matches(address player) view returns (uint256, uint256, string, string, uint256, uint256, bool)"
+                "function matches(address player) view returns (uint256, uint256, string, string, uint256, uint256, bool)",
+                "function playerLastTaskId(address) view returns (bytes32)"
             ], relayerWallet);
     
            // const tx = await contract.submitAIMove(playerAddress, game.fen(), game.pgn());
@@ -64,6 +66,7 @@ export default async function handler(req, res) {
           const taskId = await contract.playerLastTaskId(playerAddress);
       
          // 4. WATCHER: Poll the Inference Engine (PoI)
+         const INFERENCE_ADDRESS = "0x1856AEf777F9859F71D7Be24d9F7831bf42ec708";
          const inferenceEngine = new ethers.Contract(INFERENCE_ADDRESS, [
              "function getTaskStatus(bytes32 taskId) external view returns (bytes32 resultHash, bool finalized)"
          ], relayerWallet);
