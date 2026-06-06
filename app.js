@@ -8,8 +8,6 @@ const CONTRACT_ABI = [
     "function playPlayerMove(string fen, string pgn) external",
     "function submitAIMove(address player, string newFEN, string newPGN) external",
     "function matches(address) view returns (uint256 wager, uint256 gasRemaining, string currentFEN, string pgn, uint256 moveCount, uint256 startTime, bool active, bool isPlayerTurn)",
-    "function verifyAndExecuteMove(bytes32 taskId, string newFEN) external",
-    "function playerLastTaskId(address) view returns (bytes32)",
     "function lockedVaultFunds() view returns (uint256)",
     "function manualWithdraw(uint256 amount) external",
     "event MatchStarted(address indexed player, uint256 wager)",
@@ -54,7 +52,6 @@ async function connectWallet() {
             
             if (walletDisplay) {
                 walletDisplay.innerText = `Connected: ${userAddress.substring(0, 6)}...${userAddress.substring(38)}`;
-                
                 walletDisplay.onclick = () => {
                     const panel = document.getElementById('admin-panel');
                     if (panel) {
@@ -85,11 +82,9 @@ async function connectWallet() {
 async function checkOwnerStatus() {
     try {
         const owner = await contract.protocolOwner();
-        
         if (userAddress.toLowerCase() === owner.toLowerCase()) {
             walletDisplay.classList.add('owner-wallet');
             walletDisplay.title = "Click to toggle Admin Panel";
-            
             walletDisplay.addEventListener('click', () => {
                 const isHidden = adminPanel.style.display === "none";
                 adminPanel.style.display = isHidden ? "block" : "none";
@@ -108,7 +103,6 @@ async function refreshVaultStats() {
         const lockedWei = await contract.lockedVaultFunds();
         const availableWei = BigInt(totalBalanceWei) - BigInt(lockedWei);
         const availableLCAI = ethers.formatEther(availableWei);
-        
         const display = document.getElementById('vault-available');
         if (display) {
             display.innerText = parseFloat(availableLCAI).toFixed(2);
@@ -128,7 +122,6 @@ async function checkVaultLiquidity(userBet) {
     const vaultLCAI = parseFloat(ethers.formatEther(vaultBalance));
     const requiredAmount = parseFloat(userBet) + 50.5;
     const warningElement = document.getElementById('bet-warning');
-    
     if (requiredAmount > vaultLCAI) {
         warningElement.innerText = `⚠️ Bet too large. Max allowed: ${(vaultLCAI - 50.5).toFixed(2)} LCAI`;
         document.getElementById('start-btn').disabled = true;
@@ -160,11 +153,9 @@ async function adminWithdraw() {
 // --- Gameplay Logic ---
 async function startMatch() {
     const betInput = document.getElementById('betAmount').value || "0";
-    
     if (game.fen() !== "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1" && !game.game_over()) {
         if (!confirm("You have an active game. Starting a new one will overwrite it. Proceed?")) return;
     }
-    
     if (betInput < 0) return alert("Bet cannot be negative.");
     try {
         const betWei = ethers.parseEther(betInput);
@@ -172,7 +163,6 @@ async function startMatch() {
         const totalValue = betWei + gasReserveWei;
         gameStatus.innerText = "Estimating gas...";
         gameStatus.innerText = "Confirming Transaction...";
-        
         const tx = await contract.startMatch("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", { 
             value: totalValue,
             gasLimit: 800000, 
@@ -201,10 +191,8 @@ async function startMatch() {
 
 async function checkActiveGame(address) {
     if (!contract) return;
-
     try {
         const gameData = await contract.matches(address);
-        
         if (gameData && gameData.active) {
             console.log("Active game found, resuming...");
             const setupArea = document.getElementById('setup-area');
@@ -216,7 +204,6 @@ async function checkActiveGame(address) {
             }
             const contractFEN = gameData.currentFEN;
             game = new Chess(contractFEN);
-            
             if (!board) initBoard();
             game.load(gameData.currentFEN); 
             board.position(gameData.currentFEN);
@@ -224,8 +211,6 @@ async function checkActiveGame(address) {
                 document.getElementById('game-status').innerText = "Game Resumed! Your Turn.";
             } else {
                 document.getElementById('game-status').innerText = "Game Resumed! Awaiting AI...";
-                board.destroy(); 
-                initBoard();
             }
         }
     } catch (e) {
@@ -235,16 +220,13 @@ async function checkActiveGame(address) {
 
 async function refreshGameState() {
     if (!userAddress || !contract) return;
-    
     try {
         const gameData = await contract.matches(userAddress);
-        
         if (!gameData.active) {
             clearInterval(refreshInterval);
             gameStatus.innerText = "Game ended or no active match.";
             return;
         }
-
         if (gameData.currentFEN !== game.fen()) {
             game.load(gameData.currentFEN);
             board.position(gameData.currentFEN);
@@ -274,8 +256,14 @@ async function onDrop(source, target) {
     localStorage.setItem('lcai_chess_pgn', game.pgn());
 
     try {
-        // Send directly to relayer to handle both validation and AI generation via the custom RPC method.
-        gameStatus.innerText = "Processing AIVM opponent move via Lightchain RPC...";
+        gameStatus.innerText = "Anchoring move to blockchain Referee...";
+        
+        // Anchoring human turn state parameters to the contract
+        const tx = await contract.playPlayerMove(game.fen(), game.pgn());
+        gameStatus.innerText = "Awaiting block verification...";
+        await tx.wait();
+
+        gameStatus.innerText = "Processing AIVM opponent countermove via Lightchain RPC...";
         
         const response = await fetch('/api/relayer', {
             method: 'POST',
@@ -298,11 +286,11 @@ async function onDrop(source, target) {
         
         localStorage.setItem('lcai_chess_pgn', game.pgn());
         gameStatus.innerText = game.game_over() ? "Game Over!" : "AIVM Processing Complete. Your Turn!";
+
     } catch (error) {
         console.error("Core Error:", error);
         game.undo();
         board.position(game.fen());
-        
         if (error.code === 'ACTION_REJECTED') {
             gameStatus.innerText = "Move execution cancelled in wallet.";
         } else {
