@@ -254,6 +254,11 @@ async function refreshGameState() {
 let refreshInterval = setInterval(refreshGameState, 5000);
 
 function initBoard() {
+    if (board !== null) {
+        board.destroy();
+        board = null;
+    }
+    // 2. Initialize fresh
     board = Chessboard('myBoard', boardConfig);
 }
 
