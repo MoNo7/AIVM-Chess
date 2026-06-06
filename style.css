@@ -60,14 +60,17 @@ input {
 }
 
 #board-container {
-    display: block; /* Ensures it is part of the document flow */
-    margin-top: 20px;
-    min-height: 420px; 
+    display: none;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 #myBoard {
-    width: 400px;
-    height: 400px; /* CRITICAL: Force the height so it doesn't collapse into a grey bar */
+    width: 80vmin !important; /* Forces the board to be 80% of the smaller dimension */
+    height: 80vmin !important;
     margin: 0 auto;
 }
 
