@@ -310,10 +310,16 @@ async function onDrop(source, target) {
         // 1. Update UI for the wallet prompt
         gameStatus.innerText = "Anchoring move... Please confirm in your wallet.";
         const moveString = move.from + move.to; // e.g., "e2e4"
+        // Inside your move handling/onDrop function
+        const currentFEN = game.fen();
+        const currentPGN = game.pgn();
 
         // 2. Call the smart contract directly
         // Note: 'contract' must be initialized with a Web3Provider (MetaMask) signer
-        const tx = await contract.requestMove(game.fen(), moveString);
+       //const tx = await contract.requestMove(game.fen(), moveString);
+        const tx = await contract.playPlayerMove(currentFEN, currentPGN, {
+            gasLimit: 300000 // Ensure enough gas is provided for the state update
+        });
         
         gameStatus.innerText = "Transaction pending... waiting for block inclusion.";
         
