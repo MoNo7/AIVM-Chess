@@ -25,7 +25,7 @@ export default async function handler(req, res) {
             // Ensure environment variables are loaded
             const RPC_URL = process.env.LIGHTCHAIN_RPC_URL || "https://rpc.testnet.lightchain.ai";
             const PRIVATE_KEY = process.env.RELAYER_PRIVATE_KEY;
-            const CONTRACT_ADDRESS = "0x8F5Fc15d742691A924D8326b08FB28f3dE646509";
+            const CONTRACT_ADDRESS = "0x542280fB7A2d1dBCcF995033809C778F67D9870D";
     
             if (!PRIVATE_KEY) throw new Error("Server Configuration Error: Missing Private Key");
     
@@ -59,41 +59,33 @@ export default async function handler(req, res) {
             if (!game.move(moveObj)) {
                 throw new Error(`Invalid move: ${moveString}`);
             }
-    
-            // 6. AIVM INFERENCE (Anchored Logic)
-            // Note: Ensure AIVM_ENDPOINT is defined in Vercel env if api.lightchain.ai fails
-            const AIVM_API = process.env.AIVM_ENDPOINT || 'https://api.testnet.lightchain.ai/api/v1/chat/completions';
-            
-            const aiRes = await fetch(AIVM_API, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${playerAddress}` },
-                body: JSON.stringify({ 
-                    model: "Neural-Llama-3-70B",
-                    messages: [{ role: "user", content: `FEN: ${game.fen()}` }],
-                    temperature: 0.1
-                })
-            });
-    
-            if (!aiRes.ok) throw new Error(`AIVM Inference Failed: ${aiRes.statusText}`);
-    
-            const aiData = await aiRes.json();
-            const aiMoveString = aiData.choices[0].message.content.trim().toLowerCase().replace(/[^a-h1-8q]/g, '');
-    
-            if (!game.move(aiMoveString, { sloppy: true })) {
-                throw new Error(`AIVM returned illegal move: ${aiMoveString}`);
-            }
-    
-            // 7. COMMIT TO CHAIN
-            //const tx = await contract.submitAIMove(playerAddress, moveString);
-            const tx = await contract.submitAIMove(playerAddress, game.fen(), game.pgn())
-            await tx.wait();
-    
-            return res.status(200).json({ 
-                success: true, 
-                newFEN: game.fen(), 
-                gameOver: game.game_over(),
-                txHash: tx.hash
-            });
+
+           
+          const taskId = await contract.playerLastTaskId(playerAddress);
+      
+         // 4. WATCHER: Poll the Inference Engine (PoI)
+         const inferenceEngine = new ethers.Contract(INFERENCE_ADDRESS, [
+             "function getTaskStatus(bytes32 taskId) external view returns (bytes32 resultHash, bool finalized)"
+         ], relayerWallet);
+         
+         let finalized = false;
+         for (let i = 0; i < 20; i++) {
+             const status = await inferenceEngine.getTaskStatus(taskId);
+             if (status.finalized) {
+                 finalized = true;
+                 break;
+             }
+             await new Promise(r => setTimeout(r, 5000)); // Wait 5 seconds
+         }
+         
+         if (!finalized) throw new Error("PoI Timeout: Inference not finalized");
+         
+         // 5. COMMIT TO CHAIN: Submit the AI's move using the finalized task
+         // Ensure this matches your contract's submitAIMove signature
+         const tx = await contract.submitAIMove(playerAddress, game.fen(), game.pgn());
+         await tx.wait();
+         
+         return res.status(200).json({ success: true, txHash: tx.hash });
     
         } catch (err) {
             console.error("CRASH REPORT:", err);
