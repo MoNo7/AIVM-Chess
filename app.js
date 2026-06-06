@@ -271,20 +271,12 @@ async function onDrop(source, target) {
 
     if (move === null) return 'snapback';
 
-    // Sync local storage state
     localStorage.setItem('lcai_chess_pgn', game.pgn());
 
     try {
-        gameStatus.innerText = "Anchoring move to blockchain Referee...";
+        // Send directly to relayer to handle both validation and AI generation via the custom RPC method.
+        gameStatus.innerText = "Processing AIVM opponent move via Lightchain RPC...";
         
-        // 1. Prompt client wallet to execute the human's player move transaction
-        const tx = await contract.playPlayerMove(game.fen(), game.pgn());
-        gameStatus.innerText = "Awaiting transaction confirmation...";
-        await tx.wait();
-
-        gameStatus.innerText = "Processing automated AIVM opponent move via Relayer...";
-        
-        // 2. Alert relayer backend to trigger native node RPC inference and settle turn state
         const response = await fetch('/api/relayer', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -297,19 +289,17 @@ async function onDrop(source, target) {
 
         if (!response.ok) {
             const errorText = await response.text();
-            console.error("Relayer returned execution error:", errorText);
+            console.error("Relayer execution error:", errorText);
             throw new Error("Server error: " + errorText);
         }
         
         const data = await response.json();
         if (!data.success) throw new Error(data.crashReport);
         
-        // Update local board state immediately following execution propagation
         localStorage.setItem('lcai_chess_pgn', game.pgn());
         gameStatus.innerText = game.game_over() ? "Game Over!" : "AIVM Processing Complete. Your Turn!";
-
     } catch (error) {
-        console.error("Blockchain Core Error:", error);
+        console.error("Core Error:", error);
         game.undo();
         board.position(game.fen());
         
