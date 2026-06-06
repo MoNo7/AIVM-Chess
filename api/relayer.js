@@ -26,7 +26,9 @@ export default async function handler(req, res) {
             const RPC_URL = process.env.LIGHTCHAIN_RPC_URL || "https://rpc.testnet.lightchain.ai";
             const PRIVATE_KEY = process.env.RELAYER_PRIVATE_KEY;
             const CONTRACT_ADDRESS = "0x542280fB7A2d1dBCcF995033809C778F67D9870D";
-            const API_ENDPOINT = "https://chat2.lightchain.ai/api/v1/chat/completions";
+            
+            // Fixed correct chat2 testnet API endpoint base path
+            const API_ENDPOINT = "https://chat2.lightchain.ai/v1/chat/completions";
     
             if (!PRIVATE_KEY) throw new Error("Server Configuration Error: Missing Private Key");
     
@@ -59,7 +61,7 @@ export default async function handler(req, res) {
                 throw new Error(`Invalid player move: ${moveString}`);
             }
 
-            // 6. LIGHTCHAIN AIVM AI INFERENCE (Via REST API Interface)
+            // 6. LIGHTCHAIN AIVM AI INFERENCE (Bypassing unsupported RPC via direct REST endpoint)
             console.log("Requesting native cluster inference for position:", game.fen());
             
             const aiRes = await fetch(API_ENDPOINT, {
@@ -71,8 +73,8 @@ export default async function handler(req, res) {
                 body: JSON.stringify({
                     model: "Neural-Llama-3-70B",
                     messages: [
-                        { role: "system", content: "You are a grandmaster chess engine playing as black. Output ONLY the best raw move string in UCI notation (e.g. e7e5, g8f6)." },
-                        { role: "user", content: `Current position FEN: ${game.fen()}` }
+                        { role: "system", content: "You are a grandmaster chess engine playing as black. Output ONLY the best next valid square move coordinate string in clean UCI notation (e.g. e7e5, g8f6) with no commentary." },
+                        { role: "user", content: `Current chess board FEN position context: ${game.fen()}` }
                     ],
                     temperature: 0.1
                 })
@@ -85,7 +87,7 @@ export default async function handler(req, res) {
     
             const aiData = await aiRes.json();
             if (!aiData.choices || aiData.choices.length === 0) {
-                throw new Error("Invalid structure returned by Lightchain AI Cluster endpoint.");
+                throw new Error("Invalid response structure returned by Lightchain AI Cluster endpoint.");
             }
 
             const rawAiContent = aiData.choices[0].message.content;
