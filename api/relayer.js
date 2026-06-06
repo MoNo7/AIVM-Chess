@@ -22,12 +22,10 @@ export default async function handler(req, res) {
         try {
             const { playerAddress, moveObj, moveString } = req.body;
             
-            // Configuration
+            // Configuration Setup
             const RPC_URL = process.env.LIGHTCHAIN_RPC_URL || "https://rpc.testnet.lightchain.ai";
             const PRIVATE_KEY = process.env.RELAYER_PRIVATE_KEY;
             const CONTRACT_ADDRESS = "0x542280fB7A2d1dBCcF995033809C778F67D9870D";
-            
-            // Fixed correct chat2 testnet API endpoint base path
             const API_ENDPOINT = "https://chat2.lightchain.ai/v1/chat/completions";
     
             if (!PRIVATE_KEY) throw new Error("Server Configuration Error: Missing Private Key");
@@ -54,14 +52,14 @@ export default async function handler(req, res) {
             const gameData = await contract.matches(playerAddress);
             if (!gameData || !gameData[6]) throw new Error("No active game found.");
     
-            const game = new Chess(gameData[2]); // Current contract FEN
+            const game = new Chess(gameData[2]); // Current contract FEN string state
             
             // Apply human player's move locally first
             if (!game.move(moveObj)) {
-                throw new Error(`Invalid player move: ${moveString}`);
+                throw new Error(`Invalid player move sequence: ${moveString}`);
             }
 
-            // 6. LIGHTCHAIN AIVM AI INFERENCE (Bypassing unsupported RPC via direct REST endpoint)
+            // 6. LIGHTCHAIN AIVM AI INFERENCE
             console.log("Requesting native cluster inference for position:", game.fen());
             
             const aiRes = await fetch(API_ENDPOINT, {
@@ -94,12 +92,12 @@ export default async function handler(req, res) {
             const aiMoveString = rawAiContent.trim().toLowerCase().replace(/[^a-h1-8q]/g, '');
             console.log("Native AIVM responded with move:", aiMoveString);
     
-            // Apply AI move locally to finalize current state parameters before broadcasting
+            // Apply AI move locally to sync final state parameters before broadcasting
             if (!game.move(aiMoveString, { sloppy: true })) {
                 throw new Error(`AIVM returned illegal move string expression: ${aiMoveString}`);
             }
     
-            // 7. BROADCAST FINAL STATE UPDATE TO ON-CHAIN REFEREE
+            // 7. BROADCAST FINAL SYNC STATE UPDATE TO REFEREE
             const tx = await contract.submitAIMove(playerAddress, game.fen(), game.pgn());
             await tx.wait();
     
