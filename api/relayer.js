@@ -15,91 +15,68 @@ export default async function handler(req, res) {
         if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
     
         // 2. SAFETY SHIELD
-        if (!req.body || !req.body.moveObj) {
-            return res.status(400).json({ success: false, error: "Missing moveObj" });
+        if (!req.body || !req.body.playerAddress) {
+            return res.status(400).json({ success: false, error: "Missing playerAddress" });
         }
     
         try {
-            const { playerAddress, moveObj, moveString } = req.body;
+            const { playerAddress } = req.body;
             
             // Configuration Setup
             const RPC_URL = process.env.LIGHTCHAIN_RPC_URL || "https://rpc.testnet.lightchain.ai";
             const PRIVATE_KEY = process.env.RELAYER_PRIVATE_KEY;
             const CONTRACT_ADDRESS = "0x542280fB7A2d1dBCcF995033809C778F67D9870D";
-            
-            // Verified target completion route on the chat2 cluster infrastructure
-            const API_ENDPOINT = "https://chat2.lightchain.ai/v1/chat/completions";
     
             if (!PRIVATE_KEY) throw new Error("Server Configuration Error: Missing Private Key");
     
-            // 3. RPC HEALTH CHECK
-            const healthCheck = await fetch(RPC_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ jsonrpc: "2.0", method: "eth_blockNumber", params: [], id: 1 })
-            });
-    
-            if (!healthCheck.ok) throw new Error(`Lightchain RPC unreachable at ${RPC_URL}`);
-    
-            // 4. INITIALIZE ETHERS
+            // 3. INITIALIZE ETHERS PROVIDERS
             const network = ethers.Network.from(8200);
             const provider = new ethers.JsonRpcProvider(RPC_URL, network, { staticNetwork: true });
             const relayerWallet = new ethers.Wallet(PRIVATE_KEY, provider);
             const contract = new ethers.Contract(CONTRACT_ADDRESS, [
                 "function submitAIMove(address player, string newFEN, string newPGN) external",
-                "function matches(address player) view returns (uint256, uint256, string, string, uint256, uint256, bool)"
+                "function matches(address player) view returns (uint256, uint256, string, string, uint256, uint256, bool)",
+                "function playerLastTaskId(address) view returns (bytes32)"
             ], relayerWallet);
             
-            // 5. RESTORE STATE FROM ON-CHAIN
+            // 4. GRAB THE NATIVE TASK ID GENERATED ON-CHAIN
+            const taskId = await contract.playerLastTaskId(playerAddress);
+            console.log("Found Active On-Chain Task ID:", taskId);
+            
+            if (taskId === "0x0000000000000000000000000000000000000000000000000000000000000000") {
+                throw new Error("Task ID is blank. The player transaction did not register properly.");
+            }
+
+            // 5. POLL SYSTEM CONSOLE FOR INFERENCE STATE FINALIZATION
+            let finalized = false;
+            let resultMoveString = "";
+            
+            for (let i = 0; i < 20; i++) {
+                // Call standard Lightchain custom RPC node method for task status tracking
+                const taskStatus = await provider.send("lcai_getTaskStatus", [taskId]);
+                
+                if (taskStatus && taskStatus.status === "finalized") {
+                    finalized = true;
+                    // Grab the raw target move response generated natively inside the cluster execution trace
+                    resultMoveString = taskStatus.result.output.trim().toLowerCase().replace(/[^a-h1-8q]/g, '');
+                    break;
+                }
+                await new Promise(r => setTimeout(r, 4000)); // Sleep 4 seconds between checks
+            }
+            
+            if (!finalized) throw new Error("Lightchain Core Engine timeout: Task failed to achieve validation.");
+            console.log("Verified Native AIVM Move String:", resultMoveString);
+
+            // 6. RESTORE CURRENT MATURED GAME FOR POSITION SYNC
             const gameData = await contract.matches(playerAddress);
-            if (!gameData || !gameData[6]) throw new Error("No active game found.");
-    
-            const game = new Chess(gameData[2]); // Current contract FEN string state
+            const game = new Chess(gameData[2]); // Load current position
             
-            // Apply human player's move locally first
-            if (!game.move(moveObj)) {
-                throw new Error(`Invalid player move sequence: ${moveString}`);
-            }
-
-            // 6. LIGHTCHAIN AIVM AI INFERENCE
-            console.log("Requesting native cluster inference for position:", game.fen());
-            
-            const aiRes = await fetch(API_ENDPOINT, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${playerAddress}`
-                },
-                body: JSON.stringify({
-                    model: "Neural-Llama-3-70B",
-                    messages: [
-                        { role: "system", content: "You are a grandmaster chess engine playing as black. Output ONLY the best next valid square move coordinate string in clean UCI notation (e.g. e7e5, g8f6) with no commentary." },
-                        { role: "user", content: `Current chess board FEN position context: ${game.fen()}` }
-                    ],
-                    temperature: 0.1
-                })
-            });
-
-            if (!aiRes.ok) {
-                const errContext = await aiRes.text();
-                throw new Error(`Lightchain AIVM Inference Engine clusters rejected request: ${errContext}`);
+            // Apply the certified AI countermove locally to match state records
+            if (!game.move(resultMoveString, { sloppy: true })) {
+                throw new Error(`AIVM engine returned illegal chess move syntax: ${resultMoveString}`);
             }
     
-            const aiData = await aiRes.json();
-            if (!aiData.choices || aiData.choices.length === 0) {
-                throw new Error("Invalid response structure returned by Lightchain AI Cluster endpoint.");
-            }
-
-            const rawAiContent = aiData.choices[0].message.content;
-            const aiMoveString = rawAiContent.trim().toLowerCase().replace(/[^a-h1-8q]/g, '');
-            console.log("Native AIVM responded with move:", aiMoveString);
-    
-            // Apply AI move locally to sync final state parameters before broadcasting
-            if (!game.move(aiMoveString, { sloppy: true })) {
-                throw new Error(`AIVM returned illegal move string expression: ${aiMoveString}`);
-            }
-    
-            // 7. BROADCAST FINAL SYNC STATE UPDATE TO REFEREE
+            // 7. COMMIT FINAL TURN BOUNDARIES BACK TO REFEREE CONTRACT
             const tx = await contract.submitAIMove(playerAddress, game.fen(), game.pgn());
             await tx.wait();
     
@@ -112,10 +89,7 @@ export default async function handler(req, res) {
     
         } catch (err) {
             console.error("CRASH REPORT:", err);
-            return res.status(500).json({ 
-                success: false, 
-                crashReport: err.message 
-            });
+            return res.status(500).json({ success: false, crashReport: err.message });
         }
     } catch (err) {
         console.error("RELAYER_CRASH:", err);
