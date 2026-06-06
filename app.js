@@ -315,15 +315,23 @@ async function onDrop(source, target) {
         // 2. Call the smart contract directly
         // Note: 'contract' must be initialized with a Web3Provider (MetaMask) signer
        //const tx = await contract.requestMove(game.fen(), moveString);
-        const tx = await contract.playPlayerMove(currentFEN, currentPGN, {
-            gasLimit: 300000 // Ensure enough gas is provided for the state update
+
+        gameStatus.innerText = "Submitting move...";
+        
+        const response = await fetch('/api/relayer', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                playerAddress: userAddress,
+                moveObj: move, // The chess.js move object
+                moveString: move.from + move.to
+            })
         });
         
-        gameStatus.innerText = "Transaction pending... waiting for block inclusion.";
-        
-        // 3. Wait for the transaction to be mined
-        await tx.wait(); 
+        const data = await response.json();
+        if (!data.success) throw new Error(data.crashReport);
 
+        
         // 4. Wait for the AIVM to process the PoI
         gameStatus.innerText = "AIVM Validators Verifying Move... Please wait.";
 
