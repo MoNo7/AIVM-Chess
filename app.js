@@ -223,18 +223,19 @@ async function refreshGameState() {
     try {
         const gameData = await contract.matches(userAddress);
         if (!gameData.active) {
-            clearInterval(refreshInterval);
             gameStatus.innerText = "Game ended or no active match.";
             return;
         }
+        
+        // Force sync if FEN strings differ
         if (gameData.currentFEN !== game.fen()) {
+            console.log("Syncing board to contract state:", gameData.currentFEN);
             game.load(gameData.currentFEN);
-            board.position(gameData.currentFEN);
+            board.position(gameData.currentFEN, false); // 'false' prevents animation glitches
             gameStatus.innerText = gameData.isPlayerTurn ? "Your Turn!" : "Awaiting AI...";
         }
     } catch (e) {
-        console.error("Refresh loop stopped:", e);
-        clearInterval(refreshInterval);
+        console.error("Refresh loop error:", e);
     }
 }
 
