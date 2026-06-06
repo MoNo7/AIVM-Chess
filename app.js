@@ -212,6 +212,10 @@ async function checkActiveGame(address) {
             } else {
                 document.getElementById('game-status').innerText = "Game Resumed! Awaiting AI...";
             }
+            console.log("No active game. Ready to start.");
+            setupArea.style.display = 'block'; // Show start button
+            boardContainer.style.display = 'none'; // Hide board
+            gameStatus.innerText = "Ready to start a new match.";
         }
     } catch (e) {
         console.error("Error resuming game:", e);
