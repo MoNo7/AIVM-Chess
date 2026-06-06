@@ -2,10 +2,10 @@ import { ethers } from 'ethers';
 import { Chess } from 'chess.js';
 
 export default async function handler(req, res) {
-   try {
+    try {
         console.log("Relayer triggered"); 
     
-        // 1. ADD CORS HEADERS
+        // 1. CORS HEADERS
         res.setHeader('Access-Control-Allow-Credentials', true);
         res.setHeader('Access-Control-Allow-Origin', '*');
         res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -22,10 +22,9 @@ export default async function handler(req, res) {
         try {
             const { playerAddress, moveObj, moveString } = req.body;
             
-            // Ensure environment variables are loaded
-            const RPC_URL = process.env.LIGHTCHAIN_RPC_URL || "https://rpc.testnet.lightchain.ai";
+            // Configuration
+            const RPC_URL = process.env.LIGHTCHAIN_RPC_URL || "https://testnet.lightchain.ai/rpc";
             const PRIVATE_KEY = process.env.RELAYER_PRIVATE_KEY;
-           
             const CONTRACT_ADDRESS = "0x542280fB7A2d1dBCcF995033809C778F67D9870D";
     
             if (!PRIVATE_KEY) throw new Error("Server Configuration Error: Missing Private Key");
@@ -48,8 +47,6 @@ export default async function handler(req, res) {
                 "function matches(address player) view returns (uint256, uint256, string, string, uint256, uint256, bool)",
                 "function playerLastTaskId(address) view returns (bytes32)"
             ], relayerWallet);
-    
-           // const tx = await contract.submitAIMove(playerAddress, game.fen(), game.pgn());
             
             // 5. RESTORE STATE FROM ON-CHAIN
             const gameData = await contract.matches(playerAddress);
@@ -57,38 +54,45 @@ export default async function handler(req, res) {
     
             const game = new Chess(gameData[2]); // gameData[2] is currentFEN
             
-            // Validate local move against on-chain FEN
+            // Validate local human move against on-chain FEN
             if (!game.move(moveObj)) {
                 throw new Error(`Invalid move: ${moveString}`);
             }
 
-           
-          const taskId = await contract.playerLastTaskId(playerAddress);
-      
-         // 4. WATCHER: Poll the Inference Engine (PoI)
-         const INFERENCE_ADDRESS = "0x1856AEf777F9859F71D7Be24d9F7831bf42ec708";
-         const inferenceEngine = new ethers.Contract(INFERENCE_ADDRESS, [
-             "function getTaskStatus(bytes32 taskId) external view returns (bytes32 resultHash, bool finalized)"
-         ], relayerWallet);
-         
-         let finalized = false;
-         for (let i = 0; i < 20; i++) {
-             const status = await inferenceEngine.getTaskStatus(taskId);
-             if (status.finalized) {
-                 finalized = true;
-                 break;
-             }
-             await new Promise(r => setTimeout(r, 5000)); // Wait 5 seconds
-         }
-         
-         if (!finalized) throw new Error("PoI Timeout: Inference not finalized");
-         
-         // 5. COMMIT TO CHAIN: Submit the AI's move using the finalized task
-         // Ensure this matches your contract's submitAIMove signature
-         const tx = await contract.submitAIMove(playerAddress, game.fen(), game.pgn());
-         await tx.wait();
-         
-         return res.status(200).json({ success: true, txHash: tx.hash });
+            // 6. NATIVE LIGHTCHAIN AI INFERENCE (Custom Node JSON-RPC)
+            console.log("Submitting native inference task for FEN:", game.fen());
+            
+            // Directly querying the standard Lightchain custom RPC engine
+            const aiMoveResponse = await provider.send("ai_submitInferenceTask", [
+                {
+                    model: "Neural-Llama-3-70B",
+                    messages: [
+                        { role: "system", content: "You are a grandmaster chess engine playing as black. Output ONLY the best raw move string in UCI notation (e.g. e7e5, g8f6)." },
+                        { role: "user", content: `Current position FEN: ${game.fen()}` }
+                    ],
+                    temperature: 0.1
+                }
+            ]);
+
+            // Clean string formatting for chess.js compatibility
+            const aiMoveString = aiMoveResponse.trim().toLowerCase().replace(/[^a-h1-8q]/g, '');
+            console.log("Native Lightchain AIVM generated move:", aiMoveString);
+    
+            // Apply generated move locally to maintain game synchronization
+            if (!game.move(aiMoveString, { sloppy: true })) {
+                throw new Error(`AIVM returned illegal move sequence: ${aiMoveString}`);
+            }
+    
+            // 7. SECURE SETTLEMENT COMMIT TO CHAIN
+            const tx = await contract.submitAIMove(playerAddress, game.fen(), game.pgn());
+            await tx.wait();
+    
+            return res.status(200).json({ 
+                success: true, 
+                newFEN: game.fen(), 
+                gameOver: game.game_over(),
+                txHash: tx.hash
+            });
     
         } catch (err) {
             console.error("CRASH REPORT:", err);
@@ -99,7 +103,7 @@ export default async function handler(req, res) {
             });
         }
     } catch (err) {
-        console.error("RELAYER_CRASH:", err); // This is the key to seeing the error
+        console.error("RELAYER_CRASH:", err);
         return res.status(500).json({ success: false, crashReport: err.message });
     }
 }
