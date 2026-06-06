@@ -272,10 +272,10 @@ async function checkActiveGame(address) {
                 board.resize(); 
             }
             const contractFEN = gameData.currentFEN;
-            game = new Chess(gameData.contractFEN);
+            game = new Chess(contractFEN);
             
             if (!board) initBoard();
-            board.position(gameData.contractFEN);
+            board.position(contractFEN);
             game.load(contractFEN);
             if (gameData.isPlayerTurn) {
                 document.getElementById('game-status').innerText = "Game Resumed! Your Turn.";
