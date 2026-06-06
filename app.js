@@ -257,6 +257,10 @@ async function onDrop(source, target) {
 
     try {
         gameStatus.innerText = "Processing automated AIVM opponent move via Lightchain RPC...";
+
+        const tx = await contract.playPlayerMove(game.fen(), game.pgn());
+        gameStatus.innerText = "Awaiting block confirmation...";
+        await tx.wait();
         
         // Post directly to your relayer to calculate the AI move and settle state simultaneously
         const response = await fetch('/api/relayer', {
