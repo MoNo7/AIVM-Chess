@@ -6,11 +6,14 @@ const CONTRACT_ABI = [
     "function startMatch(string initialFEN) external payable",
     "function requestMove(string fen, string move) external",
     "function playPlayerMove(string fen, string pgn) external",
-    "function submitAIMove(string newFEN, string move) external",
+    "function submitAIMove(address player, string newFEN, string newPGN) external",
+    "function matches(address) view returns (uint256 wager, uint256 gasRemaining, string currentFEN, string pgn, uint256 moveCount, uint256 startTime, bool active, bool isPlayerTurn)",
     "function verifyAndExecuteMove(bytes32 taskId, string newFEN) external",
     "function playerLastTaskId(address) view returns (bytes32)",
-    "function matches(address) view returns (uint256 wager, string currentFEN, uint256 startTime, bool active)",
-    "function completeMatch(address payable player, bool playerWon) external",
+    "function lockedVaultFunds() view returns (uint256)",
+    "function manualWithdraw(uint256 amount) external",
+    "event MatchStarted(address indexed player, uint256 wager)",
+    "function completeMatch(address payable player, bool playerWon, bool isDraw, uint256 finalMoveCount, string finalPGN) external",
     "event MoveValidated(bytes32 indexed taskId, string move)"
 ];
 
@@ -261,28 +264,19 @@ async function checkActiveGame(address) {
         
         if (gameData && gameData.active) {
             console.log("Active game found, resuming...");
-            
             const setupArea = document.getElementById('setup-area');
             if (setupArea) setupArea.style.display = 'none';
-            
             const boardContainer = document.getElementById('board-container');
             boardContainer.style.display = 'block';
-
             if (board) {
                 board.resize(); 
             }
-
             const contractFEN = gameData.currentFEN;
-
             game = new Chess(contractFEN);
             
-            if (!board) {
-                initBoard(); 
-            }
-
+            if (!board) initBoard();
             board.position(contractFEN);
             game.load(contractFEN);
-            
             document.getElementById('game-status').innerText = "Game Resumed! Your Turn.";
         }
     } catch (e) {
