@@ -272,12 +272,16 @@ async function checkActiveGame(address) {
                 board.resize(); 
             }
             const contractFEN = gameData.currentFEN;
-            game = new Chess(contractFEN);
+            game = new Chess(gameData.contractFEN);
             
             if (!board) initBoard();
-            board.position(contractFEN);
+            board.position(gameData.contractFEN);
             game.load(contractFEN);
-            document.getElementById('game-status').innerText = "Game Resumed! Your Turn.";
+            if (gameData.isPlayerTurn) {
+                document.getElementById('game-status').innerText = "Game Resumed! Your Turn.";
+            } else {
+                document.getElementById('game-status').innerText = "Game Resumed! Awaiting AI...";
+            }
         }
     } catch (e) {
         console.error("Error resuming game:", e);
