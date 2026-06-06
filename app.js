@@ -310,7 +310,7 @@ async function onDrop(source, target) {
 
     try {
         // 1. Update UI for the wallet prompt
-        gameStatus.innerText = "Anchoring move... Please confirm in your wallet.";
+        gameStatus.innerText = "Anchoring move... .";
         const moveString = move.from + move.to; // e.g., "e2e4"
         // Inside your move handling/onDrop function
         const currentFEN = game.fen();
@@ -327,7 +327,7 @@ async function onDrop(source, target) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 playerAddress: userAddress,
-                moveObj: move, // The chess.js move object
+                moveObj: move, 
                 moveString: move.from + move.to
             })
         });
@@ -346,8 +346,8 @@ async function onDrop(source, target) {
         //const newFEN = await pollForFinalizedMove(userAddress); 
         
         // 5. Update the board with the AIVM's response
-        game.load(newFEN);
-        board.position(newFEN);
+        //game.load(newFEN);
+        //board.position(newFEN);
         localStorage.setItem('lcai_chess_pgn', game.pgn());
         gameStatus.innerText = game.game_over() ? "Game Over!" : "AIVM Moved. Your Turn!";
 
