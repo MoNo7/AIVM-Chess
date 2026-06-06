@@ -7,72 +7,15 @@ const CONTRACT_ABI = [
     "function requestMove(string fen, string move) external",
     "function playPlayerMove(string fen, string pgn) external",
     "function submitAIMove(address player, string newFEN, string newPGN) external",
-    "function matches(address) view returns (uint256 wager, uint256 gasRemaining, string currentFEN, string pgn, uint256 moveCount, uint256 startTime, bool active, bool isPlayerTurn)",    "function verifyAndExecuteMove(bytes32 taskId, string newFEN) external",
-    "function playerLastTaskId(address) view returns (bytes32)",
+    "function matches(address) view returns (uint256 wager, uint256 gasRemaining, string currentFEN, string pgn, uint256 moveCount, uint256 startTime, bool active, bool isPlayerTurn)",
     "function verifyAndExecuteMove(bytes32 taskId, string newFEN) external",
+    "function playerLastTaskId(address) view returns (bytes32)",
     "function lockedVaultFunds() view returns (uint256)",
     "function manualWithdraw(uint256 amount) external",
     "event MatchStarted(address indexed player, uint256 wager)",
     "function completeMatch(address payable player, bool playerWon, bool isDraw, uint256 finalMoveCount, string finalPGN) external",
     "event MoveValidated(bytes32 indexed taskId, string move)"
 ];
-
-const INFERENCE_ABI = [
-    "function getTaskStatus(bytes32 taskId) external view returns (bytes32 resultHash, bool finalized)"
-];
-const INFERENCE_ADDRESS = "0x1856AEf777F9859F71D7Be24d9F7831bf42ec708";
-
-async function pollForFinalizedMove(playerAddr) {
-    gameStatus.innerText = "Getting AI response... (1/2)";
-    
-    // 1. Fetch the exact FEN from the AI using the legacy API path
-    const aiRes = await fetch('https://api.testnet.lightchain.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            model: "Neural-Llama-3-70B",
-            messages: [
-                { role: "system", content: "You are a chess referee. Only output the valid next FEN string." },
-                { role: "user", content: `Current FEN: ${game.fen()}` }
-            ],
-            temperature: 0.1
-        })
-    });
-    
-    if (!aiRes.ok) throw new Error("Failed to get response from AIVM API");
-    const aiData = await aiRes.json();
-    const newFEN = aiData.choices[0].message.content.trim();
-
-    // 2. Poll the PoI network until the validators sign off
-    gameStatus.innerText = "Waiting for Validators to confirm... (2/2)";
-    const taskId = await contract.playerLastTaskId(playerAddr);
-    const inferenceContract = new ethers.Contract(INFERENCE_ADDRESS, INFERENCE_ABI, provider);
-
-    let finalized = false;
-    for (let i = 0; i < 30; i++) { // Poll for up to 2 minutes
-        try {
-            const status = await inferenceContract.getTaskStatus(taskId);
-            if (status.finalized) {
-                finalized = true;
-                break;
-            }
-        } catch (e) { 
-            console.warn("Polling for status..."); 
-        }
-        await new Promise(r => setTimeout(r, 4000)); // Wait 4 seconds between checks
-    }
-
-    if (!finalized) throw new Error("PoI Network timeout. Move not finalized.");
-
-    // 3. Prompt user to finalize the move on-chain
-    gameStatus.innerText = "Move Validated! Please confirm Finalization in wallet.";
-    
-    // This requires a second MetaMask signature to update the contract state
-    const tx = await contract.verifyAndExecuteMove(taskId, newFEN);
-    await tx.wait();
-
-    return newFEN;
-}
 
 let provider, signer, contract;
 let userAddress = "";
@@ -158,7 +101,7 @@ async function checkOwnerStatus() {
     }
 }
 
-// --- 3. Vault & Revenue ---
+// --- Vault & Revenue ---
 async function refreshVaultStats() {
     try {
         const totalBalanceWei = await provider.getBalance(CONTRACT_ADDRESS);
@@ -214,7 +157,7 @@ async function adminWithdraw() {
     } catch (error) { alert("Withdrawal failed."); }
 }
 
-// --- 4. Gameplay Logic ---
+// --- Gameplay Logic ---
 async function startMatch() {
     const betInput = document.getElementById('betAmount').value || "0";
     
@@ -281,7 +224,7 @@ async function checkActiveGame(address) {
                 document.getElementById('game-status').innerText = "Game Resumed! Your Turn.";
             } else {
                 document.getElementById('game-status').innerText = "Game Resumed! Awaiting AI...";
-                board.destroy(); // Simple way to lock the board
+                board.destroy(); 
                 initBoard();
             }
         }
@@ -296,7 +239,6 @@ async function refreshGameState() {
     try {
         const gameData = await contract.matches(userAddress);
         
-        // If the game is no longer active, stop the interval!
         if (!gameData.active) {
             clearInterval(refreshInterval);
             gameStatus.innerText = "Game ended or no active match.";
@@ -314,7 +256,6 @@ async function refreshGameState() {
     }
 }
 
-// Call this every 5 seconds so the board updates when the Relayer finishes
 let refreshInterval = setInterval(refreshGameState, 5000);
 
 function initBoard() {
@@ -330,27 +271,20 @@ async function onDrop(source, target) {
 
     if (move === null) return 'snapback';
 
-    // Save local state
-    if (typeof saveGameState === 'function') {
-        saveGameState();
-    } else {
-        localStorage.setItem('lcai_chess_pgn', game.pgn());
-    }
+    // Sync local storage state
+    localStorage.setItem('lcai_chess_pgn', game.pgn());
 
     try {
-        // 1. Update UI for the wallet prompt
-        gameStatus.innerText = "Anchoring move... .";
-        const moveString = move.from + move.to; // e.g., "e2e4"
-        // Inside your move handling/onDrop function
-        const currentFEN = game.fen();
-        const currentPGN = game.pgn();
-
-        // 2. Call the smart contract directly
-        // Note: 'contract' must be initialized with a Web3Provider (MetaMask) signer
-       //const tx = await contract.requestMove(game.fen(), moveString);
-
-        gameStatus.innerText = "Submitting move...";
+        gameStatus.innerText = "Anchoring move to blockchain Referee...";
         
+        // 1. Prompt client wallet to execute the human's player move transaction
+        const tx = await contract.playPlayerMove(game.fen(), game.pgn());
+        gameStatus.innerText = "Awaiting transaction confirmation...";
+        await tx.wait();
+
+        gameStatus.innerText = "Processing automated AIVM opponent move via Relayer...";
+        
+        // 2. Alert relayer backend to trigger native node RPC inference and settle turn state
         const response = await fetch('/api/relayer', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -363,39 +297,26 @@ async function onDrop(source, target) {
 
         if (!response.ok) {
             const errorText = await response.text();
-            console.error("Server returned error:", errorText);
+            console.error("Relayer returned execution error:", errorText);
             throw new Error("Server error: " + errorText);
         }
         
         const data = await response.json();
         if (!data.success) throw new Error(data.crashReport);
-
         
-        // 4. Wait for the AIVM to process the PoI
-        gameStatus.innerText = "AIVM Validators Verifying Move... Please wait.";
-
-        // --- NEW REQUIRED LOGIC: POLLING FOR FINALIZATION ---
-        // Because the AIVM takes time, we have to poll the contract 
-        // to see if the move was validated and the new FEN is ready.
-        
-        //const newFEN = await pollForFinalizedMove(userAddress); 
-        
-        // 5. Update the board with the AIVM's response
-        //game.load(newFEN);
-        //board.position(newFEN);
+        // Update local board state immediately following execution propagation
         localStorage.setItem('lcai_chess_pgn', game.pgn());
-        gameStatus.innerText = game.game_over() ? "Game Over!" : "AIVM Moved. Your Turn!";
+        gameStatus.innerText = game.game_over() ? "Game Over!" : "AIVM Processing Complete. Your Turn!";
 
     } catch (error) {
-        console.error("Blockchain Error:", error);
+        console.error("Blockchain Core Error:", error);
         game.undo();
         board.position(game.fen());
         
-        // Handle user rejection in MetaMask gracefully
         if (error.code === 'ACTION_REJECTED') {
-            gameStatus.innerText = "Move cancelled in wallet.";
+            gameStatus.innerText = "Move execution cancelled in wallet.";
         } else {
-            gameStatus.innerText = "Move failed: " + (error.reason || error.message);
+            gameStatus.innerText = "Move tracking failed: " + (error.reason || error.message);
         }
         return 'snapback';
     }
@@ -404,7 +325,7 @@ async function onDrop(source, target) {
 function onDragStart(source, piece, position, orientation) {
     if (game.game_over()) return false;
     if (game.turn() === 'b') {
-        console.warn("Wait for AIVM to move...");
+        console.warn("Wait for AIVM execution loop to finalize...");
         return false;
     }
     if (piece.search(/^b/) !== -1) return false;
