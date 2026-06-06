@@ -193,32 +193,35 @@ async function checkActiveGame(address) {
     if (!contract) return;
     try {
         const gameData = await contract.matches(address);
+        const setupArea = document.getElementById('setup-area');
+        const boardContainer = document.getElementById('board-container');
+        const gameStatus = document.getElementById('game-status');
+
         if (gameData && gameData.active) {
+            // --- CASE 1: Game is active ---
             console.log("Active game found, resuming...");
-            const setupArea = document.getElementById('setup-area');
-            if (setupArea) setupArea.style.display = 'none';
-            const boardContainer = document.getElementById('board-container');
+            setupArea.style.display = 'none';
             boardContainer.style.display = 'block';
+            
             if (board) {
-                board.resize(); 
-            }
-            const contractFEN = gameData.currentFEN;
-            game = new Chess(contractFEN);
-            if (!board) initBoard();
-            game.load(gameData.currentFEN); 
-            board.position(gameData.currentFEN);
-            if (gameData.isPlayerTurn) {
-                document.getElementById('game-status').innerText = "Game Resumed! Your Turn.";
+                board.resize();
             } else {
-                document.getElementById('game-status').innerText = "Game Resumed! Awaiting AI...";
+                initBoard();
             }
+            
+            game.load(gameData.currentFEN);
+            board.position(gameData.currentFEN);
+            
+            gameStatus.innerText = gameData.isPlayerTurn ? "Game Resumed! Your Turn." : "Game Resumed! Awaiting AI...";
+        } else {
+            // --- CASE 2: No active game (The missing part) ---
             console.log("No active game. Ready to start.");
-            setupArea.style.display = 'block'; // Show start button
-            boardContainer.style.display = 'none'; // Hide board
+            setupArea.style.display = 'block';
+            boardContainer.style.display = 'none';
             gameStatus.innerText = "Ready to start a new match.";
         }
     } catch (e) {
-        console.error("Error resuming game:", e);
+        console.error("Error checking game state:", e);
     }
 }
 
