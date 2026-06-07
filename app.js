@@ -205,36 +205,39 @@ async function checkActiveGame(address) {
         const boardContainer = document.getElementById('board-container');
         const gameStatus = document.getElementById('game-status');
 
-        if (gameData && gameData.active) {
-            // --- CASE 1: Game is active ---
+       // STRICTOR CHECK: explicitly check for true
+        if (gameData && gameData.active === true) { 
             console.log("Active game found, resuming...");
-            setupArea.style.display = 'none';
-            boardContainer.style.display = 'block';
+            if (setupArea) setupArea.style.display = 'none';
+            if (boardContainer) boardContainer.style.display = 'block';
             
-            if (board) {
-                board.resize();
-            } else {
+            if (!board) {
                 initBoard();
             }
             
             game.load(gameData.currentFEN);
             board.position(gameData.currentFEN);
-            if (board) {
-                board.resize();
-            } else {
-                initBoard();
+            
+            if (gameStatus) {
+                gameStatus.innerText = gameData.isPlayerTurn ? "Game Resumed! Your Turn." : "Game Resumed! Awaiting AI...";
             }
-            gameStatus.innerText = gameData.isPlayerTurn ? "Game Resumed! Your Turn." : "Game Resumed! Awaiting AI...";
         } else {
-            console.log("No active game. Hiding board.");
-            setupArea.style.display = 'block';
-            boardContainer.style.display = 'none'; // THIS IS CRITICAL
-            document.getElementById('game-status').innerText = "Ready to start a new match.";
+            // This will now reliably fire when active is false
+            console.log("No active game. Clearing layout.");
+            if (setupArea) setupArea.style.display = 'block';
+            if (boardContainer) boardContainer.style.display = 'none'; 
+            if (gameStatus) gameStatus.innerText = "Ready to start a new match.";
+            
+            // Wipe the visual board instance out of memory entirely
+            if (board) {
+                board.destroy();
+                board = null;
+            }
         }
     } catch (e) {
         console.error("Error checking game state:", e);
-    }finally {
-        isSyncing = false; // Release the guard
+    } finally {
+        isSyncing = false;
     }
 }
 
