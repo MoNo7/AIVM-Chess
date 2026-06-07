@@ -292,28 +292,19 @@ function initBoard() {
 async function onDrop(source, target) {
     const move = game.move({ from: source, to: target, promotion: 'q' });
     if (move === null) return 'snapback';
-
-    localStorage.setItem('lcai_chess_pgn', game.pgn());
-
-    try {
-        gameStatus.innerText = "Anchoring move to blockchain...";
-        const emptyTaskId = ethers.ZeroHash; 
     
-        // Pass all 3 required arguments to match your updated smart contract function
-        const tx = await contract.playPlayerMove(game.fen(), game.pgn(), emptyTaskId); 
+    localStorage.setItem('lcai_chess_pgn', game.pgn());
+    
+    try {
+        gameStatus.innerText = "Initializing AIVM Grandmaster Inference Engine...";
         
-        gameStatus.innerText = "Awaiting block confirmation...";
-        await tx.wait();
-
-        gameStatus.innerText = "AI Turn Initialized! Sending state to Relayer...";
-        
-        // FIX 1: Pass the FEN directly to the relayer
+        // 1. STEP ONE: Ping the relayer backend FIRST to generate the real Task ID from the node
         const response = await fetch('/api/relayer', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 playerAddress: userAddress,
-                currentFEN: game.fen() // The backend needs to know the board state!
+                currentFEN: game.fen()
             })
         });
 
@@ -321,23 +312,36 @@ async function onDrop(source, target) {
             const errorText = await response.text();
             throw new Error("Relayer Error: " + errorText);
         }
-        
+
         const data = await response.json();
-        if (!data.success) throw new Error(data.crashReport);
+        // Assume your backend sends back { success: true, taskId: "0x...", newFEN: "..." }
+        if (!data.success || !data.taskId) {
+            throw new Error(data.crashReport || "Failed to retrieve a valid Task ID from AIVM.");
+        }
+
+        const realTaskId = data.taskId;
+        console.log("Real AIVM Task ID Captured:", realTaskId);
+
+        // 2. STEP TWO: Now execute the contract call with the actual Task ID from the response
+        gameStatus.innerText = "Anchoring move and Task ID to blockchain...";
+        const tx = await contract.playPlayerMove(game.fen(), game.pgn(), realTaskId);
         
+        gameStatus.innerText = "Awaiting block confirmation...";
+        await tx.wait();
+
+        // 3. STEP THREE: Update the visual chessboard UI with the AI's response move
         game.load(data.newFEN);
         board.position(data.newFEN);
         localStorage.setItem('lcai_chess_pgn', game.pgn());
+        
         gameStatus.innerText = game.game_over() ? "Game Over!" : "AIVM Processing Complete. Your Turn!";
-
+        
     } catch (error) {
         console.error("Processing Error:", error);
         
-        // FIX 2: Only undo if the smart contract transaction itself failed
-        if (!error.message.includes("Relayer Error")) {
-            game.undo();
-            board.position(game.fen());
-        }
+        // Safety rollback if either the API or the blockchain transaction fails
+        game.undo();
+        board.position(game.fen());
         
         gameStatus.innerText = "Move tracking failed. See console.";
         return 'snapback';
