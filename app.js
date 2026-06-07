@@ -67,7 +67,7 @@ async function connectWallet() {
             //if (!board) { initBoard();
                 //} else {
                 // Only resize if the container is currently visible
-                if (document.getElementById('myBoard').offsetParent !== null) {
+                if (board && typeof board.resize === 'function') {
                     board.resize();
                 }
             //}
