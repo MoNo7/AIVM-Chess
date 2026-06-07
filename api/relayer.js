@@ -28,7 +28,18 @@ export default async function handler(req, res) {
             },
             body: JSON.stringify({ prompt: currentFEN, model: "chess-aivm" })
         });
-        const taskData = await startTaskResponse.json();
+        //const taskData = await startTaskResponse.json();
+        const rawText = await startTaskResponse.text();
+        let taskData;
+        
+        try {
+            // 2. Try to parse it
+            taskData = JSON.parse(rawText);
+        } catch (e) {
+            console.error("Failed to parse Lightchain response. Raw body:", rawText);
+            throw new Error("Invalid JSON response from Lightchain API");
+        }
+        
         const taskId = taskData.taskId;
 
         if (!taskId || taskId === "0x0000000000000000000000000000000000000000000000000000000000000000") {
