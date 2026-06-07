@@ -71,7 +71,7 @@ async function connectWallet() {
                     board.resize();
                 }
             //}
-            checkActiveGame(userAddress);
+            //checkActiveGame(userAddress);
             const setupArea = document.getElementById('setup-area');
             if (setupArea) setupArea.style.display = 'block';
             refreshVaultStats(); 
