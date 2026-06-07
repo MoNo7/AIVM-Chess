@@ -38,69 +38,71 @@ const gameStatus = document.getElementById('game-status');
 
 async function connectWallet() {
     try {
-        if (window.ethereum) {
-            try {
-                // 1. Fetch the active address from your configuration API first
-                const configResponse = await fetch('/api/config');
-                if (configResponse.ok) {
-                    const configData = await configResponse.json();
-                    if (configData.contractAddress) {
-                        CONTRACT_ADDRESS = configData.contractAddress;
-                    }
-                }
-            } catch (e) {
-                console.warn("Using fallback address:", CONTRACT_ADDRESS);
-            }
-
-
-            const configData = await configResponse.json();
-            CONTRACT_ADDRESS = configData.contractAddress;
-
-            if (!CONTRACT_ADDRESS) {
-                alert("Critical Error: Contract address is missing!");
-                return;
-            }
-            
-            console.log("Dynamically loaded contract target inside connectWallet:", CONTRACT_ADDRESS);
-            
-            provider = new ethers.BrowserProvider(window.ethereum);
-            const accounts = await provider.send("eth_requestAccounts", []);
-            userAddress = accounts[0];
-            signer = await provider.getSigner();
-            contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-
-            const walletDisplay = document.getElementById('wallet-address');
-            const connectBtn = document.getElementById('connect-btn');
-            const boardContainer = document.getElementById('board-container');
-            const gameControls = document.getElementById('game-controls');
-            
-            if (walletDisplay) {
-                walletDisplay.innerText = `Connected: ${userAddress.substring(0, 6)}...${userAddress.substring(38)}`;
-                walletDisplay.onclick = () => {
-                    const panel = document.getElementById('admin-panel');
-                    if (panel) {
-                        panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-                        if (panel.style.display === 'block') refreshVaultStats();
-                    }
-                };
-            }
-
-            if (connectBtn) connectBtn.style.display = 'none';
-            if (boardContainer) boardContainer.style.display = 'block';
-            if (gameControls) gameControls.style.display = 'block';
-
-            //if (!board) { initBoard();
-                //} else {
-                // Only resize if the container is currently visible
-                if (board && typeof board.resize === 'function') {
-                    board.resize();
-                }
-            //}
-            checkActiveGame(userAddress);
-            const setupArea = document.getElementById('setup-area');
-            if (setupArea) setupArea.style.display = 'block';
-            refreshVaultStats(); 
+        if (!window.ethereum) {
+            alert("Please install MetaMask to play!");
+            return;
         }
+
+        // 1. Safely fetch the contract address (Self-contained scope)
+        try {
+            const response = await fetch('/api/config');
+            if (response.ok) {
+                const data = await response.json();
+                if (data.contractAddress) {
+                    CONTRACT_ADDRESS = data.contractAddress;
+                    console.log("Dynamically loaded contract:", CONTRACT_ADDRESS);
+                }
+            }
+        } catch (fetchError) {
+            console.warn("Dynamic load failed. Using fallback address:", CONTRACT_ADDRESS);
+        }
+
+        // 2. Final security check before starting ethers
+        if (!CONTRACT_ADDRESS || CONTRACT_ADDRESS === "") {
+            console.error("No contract address available.");
+            alert("Critical Error: Contract address is missing!");
+            return;
+        }
+
+        // 3. Initialize Ethers.js
+        provider = new ethers.BrowserProvider(window.ethereum);
+        const accounts = await provider.send("eth_requestAccounts", []);
+        userAddress = accounts[0];
+        signer = await provider.getSigner();
+        
+        contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+        
+        // 4. Update UI Elements
+        const walletDisplay = document.getElementById('wallet-address');
+        const connectBtn = document.getElementById('connect-btn');
+        const boardContainer = document.getElementById('board-container');
+        const gameControls = document.getElementById('game-controls');
+        const setupArea = document.getElementById('setup-area');
+        
+        if (walletDisplay) {
+            walletDisplay.innerText = `Connected: ${userAddress.substring(0, 6)}...${userAddress.substring(38)}`;
+            walletDisplay.onclick = () => {
+                const panel = document.getElementById('admin-panel');
+                if (panel) {
+                    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+                    if (panel.style.display === 'block') refreshVaultStats();
+                }
+            };
+        }
+        
+        if (connectBtn) connectBtn.style.display = 'none';
+        if (boardContainer) boardContainer.style.display = 'block';
+        if (gameControls) gameControls.style.display = 'block';
+        if (setupArea) setupArea.style.display = 'block';
+        
+        if (board && typeof board.resize === 'function') {
+            board.resize();
+        }
+        
+        // 5. Verify states
+        checkActiveGame(userAddress);
+        refreshVaultStats();
+        
     } catch (error) {
         console.error("Connection Failed:", error);
     }
