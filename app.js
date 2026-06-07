@@ -297,9 +297,13 @@ async function onDrop(source, target) {
 
     try {
         gameStatus.innerText = "Anchoring move to blockchain...";
-        const tx = await contract.playPlayerMove(game.fen(), game.pgn());
+        const emptyTaskId = ethers.ZeroHash; 
+    
+        // Pass all 3 required arguments to match your updated smart contract function
+        const tx = await contract.playPlayerMove(game.fen(), game.pgn(), emptyTaskId); 
+        
         gameStatus.innerText = "Awaiting block confirmation...";
-        await tx.wait(); // MOVE IS NOW PERMANENT ON-CHAIN
+        await tx.wait();
 
         gameStatus.innerText = "AI Turn Initialized! Sending state to Relayer...";
         
