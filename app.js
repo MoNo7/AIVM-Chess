@@ -370,14 +370,24 @@ function resetGame() {
     }
 }
 
-window.onload = () => {
+window.onload = async () => {
+    // Fetch contract address globally on page bootup
+    try {
+        const configResponse = await fetch('/api/config');
+        const configData = await configResponse.json();
+        CONTRACT_ADDRESS = configData.contractAddress;
+        console.log("Dynamically loaded contract target from Vercel env:", CONTRACT_ADDRESS);
+    } catch (e) {
+        console.error("Failed to boot contract configurations:", e);
+    }
+
     const startBtn = document.getElementById('start-btn');
-    const resetBtn = document.getElementById('reset-btn'); 
+    const resetBtn = document.getElementById('reset-btn');
     const connectBtn = document.getElementById('connect-btn');
     const withdrawBtn = document.getElementById('adminWithdrawBtn');
-
+    
     if (startBtn) startBtn.addEventListener('click', startMatch);
-    if (resetBtn) resetBtn.addEventListener('click', resetGame); 
+    if (resetBtn) resetBtn.addEventListener('click', resetGame);
     if (connectBtn) connectBtn.addEventListener('click', connectWallet);
     if (withdrawBtn) withdrawBtn.addEventListener('click', adminWithdraw);
 
