@@ -296,9 +296,10 @@ async function onDrop(source, target) {
     localStorage.setItem('lcai_chess_pgn', game.pgn());
     
     try {
-        gameStatus.innerText = "Initializing AIVM Grandmaster Inference Engine...";
+        gameStatus.innerText = "AIVM is thinking... (Gasless Mode)";
+        boardConfig.draggable = false; // Lock the board so they can't move twice
         
-        // 1. STEP ONE: Ping the relayer backend FIRST to generate the real Task ID from the node
+        // Ping the Relayer. We don't need a blockchain transaction from the user here!
         const response = await fetch('/api/relayer', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -308,42 +309,29 @@ async function onDrop(source, target) {
             })
         });
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error("Relayer Error: " + errorText);
-        }
-
         const data = await response.json();
-        // Assume your backend sends back { success: true, taskId: "0x...", newFEN: "..." }
-        if (!data.success || !data.taskId) {
-            throw new Error(data.crashReport || "Failed to retrieve a valid Task ID from AIVM.");
+        
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || "Backend failed to process turn.");
         }
 
-        const realTaskId = data.taskId;
-        console.log("Real AIVM Task ID Captured:", realTaskId);
+        console.log("AIVM Task Submitted! Task ID:", data.taskId);
+        gameStatus.innerText = "AIVM evaluating move... waiting for on-chain sync.";
 
-        // 2. STEP TWO: Now execute the contract call with the actual Task ID from the response
-        gameStatus.innerText = "Anchoring move and Task ID to blockchain...";
-        const tx = await contract.playPlayerMove(game.fen(), game.pgn(), realTaskId);
-        
-        gameStatus.innerText = "Awaiting block confirmation...";
-        await tx.wait();
-
-        // 3. STEP THREE: Update the visual chessboard UI with the AI's response move
+        // 2. The backend has already saved it to the blockchain! Just update the UI.
         game.load(data.newFEN);
         board.position(data.newFEN);
         localStorage.setItem('lcai_chess_pgn', game.pgn());
         
-        gameStatus.innerText = game.game_over() ? "Game Over!" : "AIVM Processing Complete. Your Turn!";
+        gameStatus.innerText = game.game_over() ? "Game Over!" : "AIVM Moved. Your Turn!";
         
     } catch (error) {
         console.error("Processing Error:", error);
         
-        // Safety rollback if either the API or the blockchain transaction fails
+        // Safety rollback if the backend crashes
         game.undo();
         board.position(game.fen());
-        
-        gameStatus.innerText = "Move tracking failed. See console.";
+        gameStatus.innerText = "Connection error. Move rolled back.";
         return 'snapback';
     }
 }
