@@ -22,6 +22,19 @@ export default async function handler(req, res) {
 
         // Official pre-deployed testnet coordinator address
         //const COORDINATOR_ADDRESS = "0x0000000000000000000000000000000000000000"; 
+        const coordinatorAddress = await contract.getInferenceAnchor();
+        
+        console.log("Using dynamic Coordinator:", coordinatorAddress);
+
+        // 2. Pass this dynamically fetched address if your function requires it
+        const tx = await contract.requestInferenceV2(
+            coordinatorAddress, // Pass if needed by your specific V2 implementation
+            "chess-model-name", 
+            promptHash, 
+            promptId, 
+            modelDigest, 
+            configHash
+        );
 
         console.log(`Relayer executing on-chain request for player: ${playerAddress}`);
 
