@@ -3,7 +3,9 @@ import { ethers } from 'ethers';
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
 
-    const { playerAddress } = req.body;
+    // FIX 3: Receive the currentFEN from the frontend
+    const { playerAddress, currentFEN } = req.body;
+    
     const RPC_URL = process.env.LIGHTCHAIN_RPC_URL || "https://rpc.testnet.lightchain.ai";
     const PRIVATE_KEY = process.env.RELAYER_PRIVATE_KEY;
     const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS;
@@ -17,14 +19,23 @@ export default async function handler(req, res) {
             "function submitAIMove(address player, string newFEN, string newPGN) external"
         ], relayerWallet);
 
-        // 1. Get the TaskID from the contract
-        const taskId = await contract.playerLastTaskId(playerAddress);
-        if (taskId === "0x0000000000000000000000000000000000000000000000000000000000000000") {
+        // INSTEAD OF LOOKING UP A BLANK TASK ID:
+        // You must POST to the Lightchain REST API to *start* a new chess engine inference using currentFEN
+        const startTaskResponse = await fetch(`https://api.testnet.lightchain.ai/api/v1/inference/start`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ prompt: currentFEN, model: "chess-aivm" })
+        });
+        const taskData = await startTaskResponse.json();
+        const taskId = taskData.taskId;
+
+        if (!taskId || taskId === "0x0000000000000000000000000000000000000000000000000000000000000000") {
             return res.status(400).json({ success: false, message: "No active task found" });
         }
 
-        // 2. Poll the REST Inference API instead of RPC
-        // Replace this URL with your specific region's AIVM REST endpoint if necessary
+        // NOW you can poll the status...
         const statusResponse = await fetch(`https://api.testnet.lightchain.ai/api/v1/inference/status/${taskId}`);
         const statusData = await statusResponse.json();
 
