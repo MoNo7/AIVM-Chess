@@ -181,6 +181,9 @@ async function startMatch() {
         boardContainer.style.display = 'block';
         
         const boardElement = document.getElementById('myBoard');
+
+        game.reset();
+        
         boardElement.style.width = '90vw'; 
         boardElement.style.maxWidth = '800px'; 
         
