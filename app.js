@@ -194,6 +194,8 @@ let isSyncing = false;
 
 async function checkActiveGame(address) {
     if (!contract || isSyncing) return;
+    isSyncing = true;
+    
     try {
         const gameData = await contract.matches(address);
         const setupArea = document.getElementById('setup-area');
