@@ -6,7 +6,7 @@ export default async function handler(req, res) {
     const { playerAddress, currentFEN } = req.body;
 
     try {
-        const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
+        const provider = new ethers.JsonRpcProvider(process.env.LIGHTCHAIN_RPC_URL);
         const relayerWallet = new ethers.Wallet(process.env.RELAYER_PRIVATE_KEY, provider);
         
         // 1. Your ABI array contains the merged function signature
