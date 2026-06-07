@@ -373,4 +373,6 @@ window.onload = () => {
     if (resetBtn) resetBtn.addEventListener('click', resetGame); 
     if (connectBtn) connectBtn.addEventListener('click', connectWallet);
     if (withdrawBtn) withdrawBtn.addEventListener('click', adminWithdraw);
+
+    document.getElementById('board-container').style.display = 'none';
 };
