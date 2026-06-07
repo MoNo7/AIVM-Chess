@@ -26,7 +26,18 @@ export default async function handler(req, res) {
         console.log(`Relayer executing on-chain request for player: ${playerAddress}`);
 
         // Explicitly pass arguments to prevent any internal data formatting errors
-        const tx = await contract.requestAIMove(COORDINATOR_ADDRESS, playerAddress, currentFEN);
+        //const tx = await contract.requestAIMove(COORDINATOR_ADDRESS, playerAddress, currentFEN);
+        const COORDINATOR_ADDRESS = process.env.AIVM_INFERENCE_V2_ADDRESS;
+
+        // 3. Update the method call
+        // Replace requestAIMove with requestInferenceV2
+        const tx = await contract.requestInferenceV2(
+            "chess-model-name", 
+            promptHash, 
+            promptId, 
+            modelDigest, 
+            configHash
+        );
         await tx.wait(); 
 
         return res.status(200).json({ success: true, txHash: tx.hash });
