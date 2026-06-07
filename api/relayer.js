@@ -21,7 +21,7 @@ export default async function handler(req, res) {
         );
 
         // Official pre-deployed testnet coordinator address
-        const COORDINATOR_ADDRESS = "0x0000000000000000000000000000000000000000"; 
+        //const COORDINATOR_ADDRESS = "0x0000000000000000000000000000000000000000"; 
 
         console.log(`Relayer executing on-chain request for player: ${playerAddress}`);
 
