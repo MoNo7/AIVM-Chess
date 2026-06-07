@@ -73,7 +73,7 @@ async function connectWallet() {
                     board.resize();
                 }
             }
-            //checkActiveGame(userAddress);
+            checkActiveGame(userAddress);
             refreshVaultStats(); 
         }
     } catch (error) {
@@ -252,7 +252,13 @@ async function refreshGameState() {
             console.log("Syncing board to contract state:", gameData.currentFEN);
             game.load(gameData.currentFEN);
             board.position(gameData.currentFEN, false); // 'false' prevents animation glitches
-            gameStatus.innerText = gameData.isPlayerTurn ? "Your Turn!" : "Awaiting AI...";
+            const gameStatus = document.getElementById('game-status');
+            if (gameStatus) {
+                gameStatus.innerText = gameData.isPlayerTurn ? "Your Turn!" : "Awaiting AI...";
+            }
+            
+            // 4. FIX: Re-lock or unlock piece dragging depending on whose turn it is
+            boardConfig.draggable = gameData.isPlayerTurn;
         }
     } catch (e) {
         console.error("Refresh loop error:", e);
