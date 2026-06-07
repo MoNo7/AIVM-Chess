@@ -280,63 +280,52 @@ function initBoard() {
 }
 
 async function onDrop(source, target) {
-    const move = game.move({
-        from: source,
-        to: target,
-        promotion: 'q'
-    });
-
+    const move = game.move({ from: source, to: target, promotion: 'q' });
     if (move === null) return 'snapback';
 
     localStorage.setItem('lcai_chess_pgn', game.pgn());
 
     try {
-        gameStatus.innerText = "Anchoring move to blockchain Referee...";
-        
-        // 1. Execute the transaction to your smart contract. This starts the native inference query!
+        gameStatus.innerText = "Anchoring move to blockchain...";
         const tx = await contract.playPlayerMove(game.fen(), game.pgn());
         gameStatus.innerText = "Awaiting block confirmation...";
-        await tx.wait();
+        await tx.wait(); // MOVE IS NOW PERMANENT ON-CHAIN
 
-        gameStatus.innerText = "AI Turn Initialized! Checking task status via Relayer...";
+        gameStatus.innerText = "AI Turn Initialized! Sending state to Relayer...";
         
-        // 2. Alert relayer backend to monitor the resulting task status and settle final boundaries
+        // FIX 1: Pass the FEN directly to the relayer
         const response = await fetch('/api/relayer', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                playerAddress: userAddress
+                playerAddress: userAddress,
+                currentFEN: game.fen() // The backend needs to know the board state!
             })
         });
 
         if (!response.ok) {
             const errorText = await response.text();
-            console.error("Relayer processing error:", errorText);
-            throw new Error("Server error: " + errorText);
+            throw new Error("Relayer Error: " + errorText);
         }
         
         const data = await response.json();
         if (!data.success) throw new Error(data.crashReport);
         
-        // 3. Update position to match on-chain updates resolved by your contract
         game.load(data.newFEN);
         board.position(data.newFEN);
-        
         localStorage.setItem('lcai_chess_pgn', game.pgn());
         gameStatus.innerText = game.game_over() ? "Game Over!" : "AIVM Processing Complete. Your Turn!";
 
     } catch (error) {
-        console.error("Core Processing Error:", error);
-        game.undo();
-        board.position(game.fen());
+        console.error("Processing Error:", error);
         
-        if (error.message.includes("estimateGas")) {
-            gameStatus.innerText = "Move rejected: Revert rule hit. Check if you started a game match first.";
-        } else if (error.code === 'ACTION_REJECTED') {
-            gameStatus.innerText = "Move execution cancelled in wallet.";
-        } else {
-            gameStatus.innerText = "Move tracking failed: " + (error.reason || error.message);
+        // FIX 2: Only undo if the smart contract transaction itself failed
+        if (!error.message.includes("Relayer Error")) {
+            game.undo();
+            board.position(game.fen());
         }
+        
+        gameStatus.innerText = "Move tracking failed. See console.";
         return 'snapback';
     }
 }
