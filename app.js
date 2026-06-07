@@ -4,10 +4,10 @@ const CONTRACT_ADDRESS = "0x265Bf7f72A4a909B9127C3020cFECf54967bc070";
 const CONTRACT_ABI = [
     "function protocolOwner() view returns (address)",
     "function startMatch(string initialFEN) external payable",
-    "function requestMove(string fen, string move) external",
     "function playPlayerMove(string fen, string pgn, bytes32 taskId) external",
     "function submitAIMove(address player, string newFEN, string newPGN) external",
-    "function matches(address) view returns (uint256 wager, uint256 gasRemaining, string currentFEN, string pgn, uint256 moveCount, uint256 startTime, uint256 lastMoveTime, bool active, bool isPlayerTurn, uint256 finalMoveCount, string finalPGN)",    "function lockedVaultFunds() view returns (uint256)",
+    "function matches(address) view returns (uint256 wager, uint256 gasRemaining, string currentFEN, string pgn, uint256 moveCount, uint256 startTime, uint256 lastMoveTime, bool active, bool isPlayerTurn, uint256 finalMoveCount, string finalPGN)",
+    "function lockedVaultFunds() view returns (uint256)",
     "function manualWithdraw(uint256 amount) external",
     "function completeMatch(address payable player, bool playerWon, bool isDraw, uint256 finalMoveCount, string finalPGN) external",
     "event MatchStarted(address indexed player, uint256 wager)",
