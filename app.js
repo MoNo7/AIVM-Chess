@@ -209,6 +209,15 @@ async function checkActiveGame(address) {
        // STRICTOR CHECK: explicitly check for true
         if (gameData && gameData.active === true) { 
             console.log("Active game found, resuming...");
+
+            // IF THE FEN IS EMPTY, IT'S A STUCK/INVALID GAME -> FORCE CLEAR IT VISUALLY
+            if (!gameData.currentFEN || gameData.currentFEN === "" || gameData.currentFEN === "0x") {
+                console.log("Ghost match detected (empty FEN). Forcing setup layout.");
+                if (setupArea) setupArea.style.display = 'block';
+                if (boardContainer) boardContainer.style.display = 'none';
+                if (gameControls) gameControls.style.display = 'none';
+                return; 
+            }
             if (setupArea) setupArea.style.display = 'none';
             if (boardContainer) boardContainer.style.display = 'block';
             if (gameControls) gameControls.style.display = 'block';
