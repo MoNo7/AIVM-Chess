@@ -61,8 +61,8 @@ async function connectWallet() {
             }
 
             if (connectBtn) connectBtn.style.display = 'none';
-            //if (boardContainer) boardContainer.style.display = 'block';
-            //if (gameControls) gameControls.style.display = 'block';
+            if (boardContainer) boardContainer.style.display = 'block';
+            if (gameControls) gameControls.style.display = 'block';
 
             //if (!board) { initBoard();
                 //} else {
@@ -72,6 +72,8 @@ async function connectWallet() {
                 }
             //}
             checkActiveGame(userAddress);
+            const setupArea = document.getElementById('setup-area');
+            if (setupArea) setupArea.style.display = 'block';
             refreshVaultStats(); 
         }
     } catch (error) {
