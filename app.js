@@ -62,17 +62,16 @@ async function connectWallet() {
             }
 
             if (connectBtn) connectBtn.style.display = 'none';
-            if (boardContainer) boardContainer.style.display = 'block';
-            if (gameControls) gameControls.style.display = 'block';
+            //if (boardContainer) boardContainer.style.display = 'block';
+            //if (gameControls) gameControls.style.display = 'block';
 
-            if (!board) {
-                initBoard();
-            } else {
+            //if (!board) { initBoard();
+                //} else {
                 // Only resize if the container is currently visible
                 if (document.getElementById('myBoard').offsetParent !== null) {
                     board.resize();
                 }
-            }
+            //}
             checkActiveGame(userAddress);
             refreshVaultStats(); 
         }
@@ -203,17 +202,17 @@ async function checkActiveGame(address) {
         const gameData = await contract.matches(address);
         const setupArea = document.getElementById('setup-area');
         const boardContainer = document.getElementById('board-container');
+        const gameControls = document.getElementById('game-controls');
         const gameStatus = document.getElementById('game-status');
-
+        
        // STRICTOR CHECK: explicitly check for true
         if (gameData && gameData.active === true) { 
             console.log("Active game found, resuming...");
             if (setupArea) setupArea.style.display = 'none';
             if (boardContainer) boardContainer.style.display = 'block';
+            if (gameControls) gameControls.style.display = 'block';
             
-            if (!board) {
-                initBoard();
-            }
+            if (!board) { initBoard(); }
             
             game.load(gameData.currentFEN);
             board.position(gameData.currentFEN);
@@ -226,6 +225,7 @@ async function checkActiveGame(address) {
             console.log("No active game. Clearing layout.");
             if (setupArea) setupArea.style.display = 'block';
             if (boardContainer) boardContainer.style.display = 'none'; 
+            if (gameControls) gameControls.style.display = 'none';
             if (gameStatus) gameStatus.innerText = "Ready to start a new match.";
             
             // Wipe the visual board instance out of memory entirely
