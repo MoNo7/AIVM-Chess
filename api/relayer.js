@@ -9,20 +9,26 @@ export default async function handler(req, res) {
         const provider = new ethers.JsonRpcProvider(process.env.LIGHTCHAIN_RPC_URL);
         const relayerWallet = new ethers.Wallet(process.env.RELAYER_PRIVATE_KEY, provider);
         
-        // 1. Update your contract function signature ABI array element
+        // Fully defined string ABI signature matching your deployed code
+        const fullAbi = [
+            "function requestAIMove(address coordinatorAddress, address player, string currentFEN) external returns (bytes32)"
+        ];
+
         const contract = new ethers.Contract(
             process.env.CONTRACT_ADDRESS, 
-            ["function requestAIMove(address coordinatorAddress, address player, string memory currentFEN) external returns (bytes32)"], 
+            fullAbi, 
             relayerWallet
         );
 
+        // Official pre-deployed testnet coordinator address
         const COORDINATOR_ADDRESS = "0x0000000000000000000000000000000000000001"; 
 
-        // 2. Pass playerAddress as the middle argument
-        const tx = await contract.requestAIMove(COORDINATOR_ADDRESS, playerAddress, currentFEN);
-        await tx.wait();
+        console.log(`Relayer executing on-chain request for player: ${playerAddress}`);
 
-        // 4. Return the transaction hash back to your frontend app.js
+        // Explicitly pass arguments to prevent any internal data formatting errors
+        const tx = await contract.requestAIMove(COORDINATOR_ADDRESS, playerAddress, currentFEN);
+        await tx.wait(); 
+
         return res.status(200).json({ success: true, txHash: tx.hash });
 
     } catch (error) {
