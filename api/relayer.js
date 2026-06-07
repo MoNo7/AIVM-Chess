@@ -11,7 +11,7 @@ export default async function handler(req, res) {
         
         // Fully defined string ABI signature matching your deployed code
         const fullAbi = [
-            "function requestAIMove(address coordinatorAddress, address player, string currentFEN) external returns (bytes32)"
+            "function requestInferenceV2(string model, bytes32 promptHash, bytes32 promptId, bytes32 modelDigest, bytes32 detConfigHash) external payable returns (uint256 requestId, bytes32 taskId)"
         ];
 
         const contract = new ethers.Contract(
