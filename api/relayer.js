@@ -9,21 +9,22 @@ export default async function handler(req, res) {
         const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
         const relayerWallet = new ethers.Wallet(process.env.RELAYER_PRIVATE_KEY, provider);
         
-        // Pass the contract ABI containing your new function signature
+        // 1. Your ABI array contains the merged function signature
         const contract = new ethers.Contract(
             process.env.CONTRACT_ADDRESS, 
             ["function requestAIMove(address coordinatorAddress, string memory currentFEN) external returns (bytes32)"], 
             relayerWallet
         );
 
-        // Replace this address placeholder with the Coordinator address found in the Lightchain docs
-        const COORDINATOR_ADDRESS = "0x0000000000000000000000000000000000000001"; // Update to match network system specs
+        // 2. Define the Lightchain system contract address
+        const COORDINATOR_ADDRESS = "0x0000000000000000000000000000000000000001"; 
 
-        // Execute the native contract call
+        // 3. THIS IS WHERE THE SNIPPET FITS:
+        // Execute the native contract call passing BOTH required arguments
         const tx = await contract.requestAIMove(COORDINATOR_ADDRESS, currentFEN);
-        const receipt = await tx.wait();
+        await tx.wait(); // Wait for block confirmation
 
-        // Parse logs or receipts to pull the native taskId out if needed
+        // 4. Return the transaction hash back to your frontend app.js
         return res.status(200).json({ success: true, txHash: tx.hash });
 
     } catch (error) {
