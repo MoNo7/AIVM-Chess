@@ -1,7 +1,7 @@
 // --- Configuration ---
 const OWNER_ADDRESS = "0x4D36B31d4BFB957A5D816B0f420a9e755EFc6a2c";
-const CONTRACT_ADDRESS = "";
-//const CONTRACT_ADDRESS = "0xbc592917e5089d9ED718C2547783f7de6F5B440F";
+//let CONTRACT_ADDRESS = "";
+const CONTRACT_ADDRESS = "0x562Aa96bb152558C158758E2E7E2b056EF393638";
 const CONTRACT_ABI = [
     "function protocolOwner() view returns (address)",
     "function startMatch(string initialFEN) external payable",
@@ -39,6 +39,30 @@ const gameStatus = document.getElementById('game-status');
 async function connectWallet() {
     try {
         if (window.ethereum) {
+            try {
+                // 1. Fetch the active address from your configuration API first
+                const configResponse = await fetch('/api/config');
+                if (configResponse.ok) {
+                    const configData = await configResponse.json();
+                    if (configData.contractAddress) {
+                        CONTRACT_ADDRESS = configData.contractAddress;
+                    }
+                }
+            } catch (e) {
+                console.warn("Using fallback address:", CONTRACT_ADDRESS);
+            }
+
+
+            const configData = await configResponse.json();
+            CONTRACT_ADDRESS = configData.contractAddress;
+
+            if (!CONTRACT_ADDRESS) {
+                alert("Critical Error: Contract address is missing!");
+                return;
+            }
+            
+            console.log("Dynamically loaded contract target inside connectWallet:", CONTRACT_ADDRESS);
+            
             provider = new ethers.BrowserProvider(window.ethereum);
             const accounts = await provider.send("eth_requestAccounts", []);
             userAddress = accounts[0];
@@ -371,14 +395,18 @@ function resetGame() {
 }
 
 window.onload = async () => {
-    // Fetch contract address globally on page bootup
+    // Fetch contract address safely
     try {
         const configResponse = await fetch('/api/config');
-        const configData = await configResponse.json();
-        CONTRACT_ADDRESS = configData.contractAddress;
-        console.log("Dynamically loaded contract target from Vercel env:", CONTRACT_ADDRESS);
+        if (configResponse.ok) {
+            const configData = await configResponse.json();
+            if (configData.contractAddress) {
+                CONTRACT_ADDRESS = configData.contractAddress;
+                console.log("Dynamically loaded contract from Vercel:", CONTRACT_ADDRESS);
+            }
+        }
     } catch (e) {
-        console.error("Failed to boot contract configurations:", e);
+        console.warn("Dynamic load failed. Using fallback address:", CONTRACT_ADDRESS);
     }
 
     const startBtn = document.getElementById('start-btn');
@@ -390,6 +418,6 @@ window.onload = async () => {
     if (resetBtn) resetBtn.addEventListener('click', resetGame);
     if (connectBtn) connectBtn.addEventListener('click', connectWallet);
     if (withdrawBtn) withdrawBtn.addEventListener('click', adminWithdraw);
-
+    
     document.getElementById('board-container').style.display = 'none';
 };
