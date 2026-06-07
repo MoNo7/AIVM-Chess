@@ -9,50 +9,32 @@ export default async function handler(req, res) {
         const provider = new ethers.JsonRpcProvider(process.env.LIGHTCHAIN_RPC_URL);
         const relayerWallet = new ethers.Wallet(process.env.RELAYER_PRIVATE_KEY, provider);
         
-        // Fully defined string ABI signature matching your deployed code
+        // ADDED: Include getInferenceAnchor in the ABI so the call succeeds
         const fullAbi = [
-            "function requestInferenceV2(string model, bytes32 promptHash, bytes32 promptId, bytes32 modelDigest, bytes32 detConfigHash) external payable returns (uint256 requestId, bytes32 taskId)"
+            "function requestInferenceV2(string model, bytes32 promptHash, bytes32 promptId, bytes32 modelDigest, bytes32 detConfigHash) external payable returns (uint256 requestId, bytes32 taskId)",
+            "function getInferenceAnchor() external view returns (address)"
         ];
 
-        const contract = new ethers.Contract(
-            process.env.CONTRACT_ADDRESS, 
-            fullAbi, 
-            relayerWallet
-        );
+        const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, fullAbi, relayerWallet);
 
-        // Official pre-deployed testnet coordinator address
-        //const COORDINATOR_ADDRESS = "0x0000000000000000000000000000000000000000"; 
-        const coordinatorAddress = await contract.getInferenceAnchor();
-        
-        console.log("Using dynamic Coordinator:", coordinatorAddress);
-
-        // 2. Pass this dynamically fetched address if your function requires it
-        const tx = await contract.requestInferenceV2(
-            coordinatorAddress, // Pass if needed by your specific V2 implementation
-            "chess-model-name", 
-            promptHash, 
-            promptId, 
-            modelDigest, 
-            configHash
-        );
+        // Define your hashes (Ensure these match your logic)
+        const promptHash = ethers.keccak256(ethers.toUtf8Bytes(currentFEN));
+        const promptId = ethers.keccak256(ethers.toUtf8Bytes(playerAddress + Date.now().toString()));
+        const modelDigest = "0xf4a414fa51803433e9197f32cda96d5cb2ac8269c481eb0262fe2dd11f428848"; // From your contract
+        const detConfigHash = ethers.keccak256(ethers.toUtf8Bytes("chess-default-config"));
 
         console.log(`Relayer executing on-chain request for player: ${playerAddress}`);
 
-        // Explicitly pass arguments to prevent any internal data formatting errors
-        //const tx = await contract.requestAIMove(COORDINATOR_ADDRESS, playerAddress, currentFEN);
-        const COORDINATOR_ADDRESS = process.env.AIVM_INFERENCE_V2_ADDRESS;
-
-        // 3. Update the method call
-        // Replace requestAIMove with requestInferenceV2
+        // SINGLE, CORRECTED CALL
         const tx = await contract.requestInferenceV2(
             "chess-model-name", 
             promptHash, 
             promptId, 
             modelDigest, 
-            configHash
+            detConfigHash
         );
+        
         await tx.wait(); 
-
         return res.status(200).json({ success: true, txHash: tx.hash });
 
     } catch (error) {
