@@ -341,8 +341,10 @@ async function onDrop(source, target) {
         if (!response.ok || !data.success) {
             throw new Error(data.error || "Backend failed to process turn.");
         }
+        clearInterval(refreshInterval);
 
         console.log("AIVM Task Submitted! Task ID:", data.taskId);
+        
         gameStatus.innerText = "AIVM evaluating move... waiting for on-chain sync.";
 
         // 2. The backend has already saved it to the blockchain! Just update the UI.
