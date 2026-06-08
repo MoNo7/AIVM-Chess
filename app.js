@@ -351,7 +351,8 @@ async function onDrop(source, target) {
         game.load(data.newFEN);
         board.position(data.newFEN);
         localStorage.setItem('lcai_chess_pgn', game.pgn());
-        
+
+        boardConfig.draggable = true        
         gameStatus.innerText = game.game_over() ? "Game Over!" : "AIVM Moved. Your Turn!";
         
     } catch (error) {
