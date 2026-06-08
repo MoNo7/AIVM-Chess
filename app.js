@@ -354,7 +354,25 @@ async function onDrop(source, target) {
 
         boardConfig.draggable = true        
         gameStatus.innerText = game.game_over() ? "Game Over!" : "AIVM Moved. Your Turn!";
+        if (game.isGameOver()) {
+            gameStatus.innerText = "Game Over! Returning to lobby...";
         
+            // Wait 4 seconds so you can see the final board state, then flip the layouts
+            setTimeout(() => {
+                document.getElementById('board-container').style.display = 'none';
+                document.getElementById('setup-area').style.display = 'block';
+                document.getElementById('game-title').innerText = "Play the AIVM Grandmaster";
+                gameStatus.innerText = "Ready to start a new match.";
+                
+                if (board) {
+                    board.destroy();
+                    board = null;
+                }
+                game.reset();
+            }, 4000);
+        } else {
+            gameStatus.innerText = "AIVM Moved. Your Turn!";
+        }
     } catch (error) {
         console.error("Processing Error:", error);
         
