@@ -8,6 +8,8 @@ export default async function handler(req, res) {
     try {
         const provider = new ethers.JsonRpcProvider(process.env.LIGHTCHAIN_RPC_URL);
         const relayerWallet = new ethers.Wallet(process.env.RELAYER_PRIVATE_KEY, provider);
+
+        console.log("VERCEL IS DEPLOYING WITH WALLET ADDRESS:", relayerWallet.address);
         
         // Use the exact signature from your AIVMChessReferee contract
         const fullAbi = [
