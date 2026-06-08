@@ -1,7 +1,7 @@
 // --- Configuration ---
 const OWNER_ADDRESS = "0x4D36B31d4BFB957A5D816B0f420a9e755EFc6a2c";
 //let CONTRACT_ADDRESS = "";
-const CONTRACT_ADDRESS = "0x001a13dD0E715c20a9f652E2810D2A9a994a6C5f";
+const CONTRACT_ADDRESS = "0x7BEa8d5A8f9c731e966F23d01CbC277e62E1ea30";
 const CONTRACT_ABI = [
     "function protocolOwner() view returns (address)",
     "function startMatch(string initialFEN) external payable",
