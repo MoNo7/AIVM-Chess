@@ -1,5 +1,4 @@
 import { ethers } from 'ethers';
-// 1. Move the import to the top using ES Module syntax
 import { Chess } from 'chess.js';
 
 export default async function handler(req, res) {
@@ -31,7 +30,7 @@ export default async function handler(req, res) {
 
         // 2. Instantiate using the clean module import
         const tempGame = new Chess(currentFEN);
-        if (!tempGame.game_over()) {
+        if (!tempGame.isGameOver()) {
             const moves = tempGame.moves();
             const randomMove = moves[Math.floor(Math.random() * moves.length)];
             tempGame.move(randomMove);
