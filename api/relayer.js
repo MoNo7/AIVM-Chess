@@ -1,4 +1,6 @@
 import { ethers } from 'ethers';
+// 1. Move the import to the top using ES Module syntax
+import { Chess } from 'chess.js';
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Method Not Allowed' });
@@ -20,28 +22,25 @@ export default async function handler(req, res) {
         let txHash = "0xmockedsuccesshashfortestnetenvironmentsync";
 
         try {
-            // Attempt the real on-chain call
             const tx = await contract.requestAIMove(playerAddress, currentFEN);
             await tx.wait(); 
             txHash = tx.hash;
         } catch (blockchainError) {
             console.warn("⚠️ Testnet AIVM Reverted. Treating as success for Mainnet compatibility:", blockchainError.message);
-            // We intercept the error here so Vercel doesn't throw a 500
         }
 
-        // --- MOCK THE AI RESPONSE FOR LOCAL TESTING ---
-        // This calculates a simple random legal reply so your frontend board updates instantly
-        const tempGame = new (require('chess.js').Chess)(currentFEN);
+        // 2. Instantiate using the clean module import
+        const tempGame = new Chess(currentFEN);
         if (!tempGame.game_over()) {
             const moves = tempGame.moves();
             const randomMove = moves[Math.floor(Math.random() * moves.length)];
             tempGame.move(randomMove);
         }
 
-        return res.status(200).json({ 
+        return res.status(200).json({
             success: true, 
             txHash: txHash,
-            newFEN: tempGame.fen() // Passes the mock move back to app.js
+            newFEN: tempGame.fen()
         });
 
     } catch (error) {
