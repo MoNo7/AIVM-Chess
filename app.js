@@ -321,6 +321,19 @@ async function onDrop(source, target) {
     if (move === null) return 'snapback';
     
     localStorage.setItem('lcai_chess_pgn', game.pgn());
+
+    // --- 1. NEW: CHECK IF YOU JUST BEAT THE AI ---
+    if (game.in_checkmate()) {
+        console.log("Player wins by checkmate!");
+        gameStatus.innerText = "Checkmate! You win! Claiming prize...";
+        await settleMatch(true, false); // You won!
+        return;
+    } else if (game.in_draw() || game.in_stalemate() || game.in_threefold_repetition()) {
+        console.log("Game is a draw!");
+        gameStatus.innerText = "Game is a draw! Settling match...";
+        await settleMatch(false, true); // It's a draw
+        return;
+    }
     
     try {
         gameStatus.innerText = "AIVM is thinking... (Gasless Mode)";
@@ -343,44 +356,72 @@ async function onDrop(source, target) {
         }
         clearInterval(refreshInterval);
 
-        console.log("AIVM Task Submitted! Task ID:", data.taskId);
+        console.log("AIVM Move Received! TX:", data.txHash);
+        gameStatus.innerText = "AIVM move received... updating board.";
         
-        gameStatus.innerText = "AIVM evaluating move... waiting for on-chain sync.";
-
         // 2. The backend has already saved it to the blockchain! Just update the UI.
         game.load(data.newFEN);
         board.position(data.newFEN);
         localStorage.setItem('lcai_chess_pgn', game.pgn());
-
         boardConfig.draggable = true        
-        gameStatus.innerText = game.game_over() ? "Game Over!" : "AIVM Moved. Your Turn!";
-        if (game.isGameOver()) {
-            gameStatus.innerText = "Game Over! Returning to lobby...";
-        
-            // Wait 4 seconds so you can see the final board state, then flip the layouts
-            setTimeout(() => {
-                document.getElementById('board-container').style.display = 'none';
-                document.getElementById('setup-area').style.display = 'block';
-                document.getElementById('game-title').innerText = "Play the AIVM Grandmaster";
-                gameStatus.innerText = "Ready to start a new match.";
-                
-                if (board) {
-                    board.destroy();
-                    board = null;
+
+                if (game.in_checkmate()) {
+                    gameStatus.innerText = "AI Checkmated You! Game Over.";
+                    await settleMatch(false, false); // You lost
+                } else if (game.game_over()) {
+                     gameStatus.innerText = "Game Over (Draw/Stalemate)!";
+                     await settleMatch(false, true); // It's a draw
+                } else {
+                    gameStatus.innerText = "AIVM Moved. Your Turn!";
                 }
-                game.reset();
-            }, 4000);
-        } else {
-            gameStatus.innerText = "AIVM Moved. Your Turn!";
+            } catch (error) {
+                console.error("Processing Error:", error);
+                
+                game.undo();
+                board.position(game.fen());
+                gameStatus.innerText = "Connection error. Move rolled back.";
+                boardConfig.draggable = true; // Unlock so you can try again
+                return 'snapback';
+            }
         }
-    } catch (error) {
-        console.error("Processing Error:", error);
+
+async function settleMatch(playerWon, isDraw) {
+    try {
+        if (!contract) return;
         
-        // Safety rollback if the backend crashes
-        game.undo();
-        board.position(game.fen());
-        gameStatus.innerText = "Connection error. Move rolled back.";
-        return 'snapback';
+        // Optional: show user a confirmation on MetaMask
+        const tx = await contract.completeMatch(
+            userAddress,
+            playerWon,
+            isDraw,
+            game.history().length,
+            game.pgn()
+        );
+        
+        gameStatus.innerText = "Confirming game over on the blockchain...";
+        await tx.wait();
+        console.log("Match settled on-chain!");
+
+        gameStatus.innerText = "Match Settled! Returning to lobby...";
+
+        // Wait 4 seconds to view the final board, then reset UI
+        setTimeout(() => {
+            document.getElementById('board-container').style.display = 'none';
+            document.getElementById('setup-area').style.display = 'block';
+            document.getElementById('game-title').innerText = "Play the AIVM Grandmaster";
+            gameStatus.innerText = "Ready to start a new match.";
+
+            if (board) {
+                board.destroy();
+                board = null;
+            }
+            game.reset();
+            localStorage.removeItem('lcai_chess_pgn'); // clear saved game
+        }, 4000);
+
+    } catch (error) {
+        console.error("Error settling match:", error);
+        gameStatus.innerText = "Failed to settle match on-chain. See console.";
     }
 }
 
