@@ -43,6 +43,13 @@ button {
     font-weight: bold;
     cursor: pointer;
     transition: background 0.2s;
+    white-space: normal;
+    line-height: 1.2;
+}
+
+button small {
+    font-size: 0.75rem; 
+    opacity: 0.8;    
 }
 
 button:hover {
