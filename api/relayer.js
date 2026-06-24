@@ -3,116 +3,45 @@ import { Chess } from 'chess.js';
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Method Not Allowed' });
-
     const { playerAddress, currentFEN } = req.body;
 
     try {
         const provider = new ethers.JsonRpcProvider(process.env.LIGHTCHAIN_RPC_URL);
         const relayerWallet = new ethers.Wallet(process.env.RELAYER_PRIVATE_KEY, provider);
         
-        console.log("VERCEL RELAYER FIRING FROM:", relayerWallet.address);
-
-        // 1. RESTORED ABI: We need both functions to properly sequence the turns
         const fullAbi = [
             "function requestAIMove(address player, string currentFEN) external returns (uint256)",
             "function submitAIMove(address player, string newFEN, string newPGN) external"
         ];
         const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, fullAbi, relayerWallet);
         
-        // 2. FIX FOR THE "AWAITING PLAYER" REVERT:
-        // Tell the blockchain that the player made their move first!
+        // 1. Sync Player Move First
         try {
-            console.log("Syncing player move to blockchain...");
-            const playerTx = await contract.requestAIMove(playerAddress, currentFEN);
-            await playerTx.wait(); 
-        } catch (syncError) {
-            console.warn("⚠️ Player move sync issue (might already be AI's turn):", syncError.message);
+            const txSync = await contract.requestAIMove(playerAddress, currentFEN);
+            await txSync.wait();
+        } catch (e) {
+            console.warn("Sync warning (possible race):", e.message);
         }
 
-        const game = new Chess(currentFEN);
-        if (game.isGameOver()) {
-            return res.status(400).json({ success: false, error: "Game is already over" });
-        }
-
-        let aiMoveSan = null;
-
-        // 3. FIX FOR "FETCH FAILED": Use the exact endpoint and payload from Lightchain docs
-        try {
-            const aiResponse = await fetch("https://api.lightchain-protocol.com/inference", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${process.env.LCAI_API_KEY}` 
-                },
-                body: JSON.stringify({
-                    model: "chess-grandmaster-v1", // Adjust to the exact V2 model ID if different
-                    messages: [
-                        { 
-                            role: "system", 
-                            content: "You are a Stockfish-level chess engine. Respond ONLY with the best legal move in standard algebraic notation (SAN) like 'e4' or 'Nf3'. Do not include any other text, markdown, or commentary." 
-                        },
-                        { 
-                            role: "user", 
-                            content: `The current board FEN is: ${currentFEN}. What is your move?` 
-                        }
-                    ],
-                    temperature: 0.1, // Keep low for deterministic, analytical outputs
-                    max_tokens: 10
-                })
-            });
-
-            if (aiResponse.ok) {
-                const data = await aiResponse.json();
-                // Strip out any weird punctuation or whitespace the LLM might have appended
-                const rawContent = data.choices[0].message.content;
-                aiMoveSan = rawContent.replace(/[^a-zA-Z0-9#+-=]/g, '');
-                console.log("AI Suggested Move:", aiMoveSan);
-            } else {
-                const errorText = await aiResponse.text();
-                console.warn(`AI API Error (${aiResponse.status}):`, errorText);
-            }
-        } catch (apiError) {
-            console.error("Failed to reach AI API:", apiError.message);
-        }
-
-        // 4. Validate and Apply the Move locally using chess.js
-        try {
-            if (aiMoveSan) {
-                game.move(aiMoveSan); // Will throw an error if the AI hallucinated an illegal move
-            } else {
-                throw new Error("No move provided by AI");
-            }
-        } catch (invalidMoveError) {
-            console.warn(`Invalid move from AI ("${aiMoveSan}"). Using fallback random move.`);
-            const moves = game.moves();
-            const randomMove = moves[Math.floor(Math.random() * moves.length)];
-            game.move(randomMove);
-        }
-
-        const newFEN = game.fen();
-        const newPGN = game.pgn(); 
-        let txHash = "0xmockedsuccesshashfortestnetenvironmentsync";
-
-        // 5. Submit the finalized move to the Blockchain
-        try {
-            const tx = await contract.submitAIMove(playerAddress, newFEN, newPGN);
-            await tx.wait(); 
-            txHash = tx.hash;
-            console.log("Move submitted on-chain. TX:", txHash);
-        } catch (blockchainError) {
-            console.warn("⚠️ Testnet AIVM Reverted. Treating as success for Mainnet compatibility:", blockchainError.message);
-        }
-
-        // 6. Return the result instantly to the frontend
-        return res.status(200).json({
-            success: true, 
-            txHash: txHash,
-            newFEN: newFEN,
-            newPGN: newPGN
+        // 2. Fetch AI Inference
+        const aiResponse = await fetch("https://api.lightchain-protocol.com/inference", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ position: currentFEN })
         });
 
+        const data = await aiResponse.json();
+        const aiMove = data.move;
+
+        // 3. Apply and Submit AI Move
+        const game = new Chess(currentFEN);
+        game.move(aiMove);
+        
+        const txSubmit = await contract.submitAIMove(playerAddress, game.fen(), game.pgn());
+        await txSubmit.wait();
+
+        return res.status(200).json({ success: true, newFEN: game.fen() });
     } catch (error) {
-        console.error("Relayer execution crashed completely:", error);
         return res.status(500).json({ success: false, error: error.message });
     }
 }
