@@ -27,30 +27,40 @@ export default async function handler(req, res) {
 
         let aiMoveSan = null;
 
-        // 3. Call the Lightchain Chat v2 API for Inference
+        // 3. Call the Lightchain Chat V2 API
         try {
-            const aiResponse = await fetch("https://chat-api.lightchain.ai/v1/chat/completions", { // Update URL based on their docs
+            const aiResponse = await fetch("https://api.lightchain.ai/v1/chat/completions", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": `Bearer ${process.env.LCAI_API_KEY}` // Ensure this is in your Vercel env vars
+                    "Authorization": `Bearer ${process.env.LCAI_API_KEY}` 
                 },
                 body: JSON.stringify({
-                    model: "chess-grandmaster-v1", // Ensure correct model name from docs
+                    model: "chess-grandmaster-v1", // Adjust to the exact V2 model ID if different
                     messages: [
-                        { role: "system", content: "You are a Stockfish-level chess engine. Respond ONLY with the best legal move in standard algebraic notation (SAN) like 'e4' or 'Nf3'. Do not include any other text." },
-                        { role: "user", content: `The current board FEN is: ${currentFEN}. What is your move?` }
+                        { 
+                            role: "system", 
+                            content: "You are a Stockfish-level chess engine. Respond ONLY with the best legal move in standard algebraic notation (SAN) like 'e4' or 'Nf3'. Do not include any other text, markdown, or commentary." 
+                        },
+                        { 
+                            role: "user", 
+                            content: `The current board FEN is: ${currentFEN}. What is your move?` 
+                        }
                     ],
-                    temperature: 0.2
+                    temperature: 0.1, // Keep low for deterministic, analytical outputs
+                    max_tokens: 10
                 })
             });
 
             if (aiResponse.ok) {
                 const data = await aiResponse.json();
-                aiMoveSan = data.choices[0].message.content.trim();
+                // Strip out any weird punctuation or whitespace the LLM might have appended
+                const rawContent = data.choices[0].message.content;
+                aiMoveSan = rawContent.replace(/[^a-zA-Z0-9#+-=]/g, '');
                 console.log("AI Suggested Move:", aiMoveSan);
             } else {
-                console.warn("AI API Error, falling back to random move.");
+                const errorText = await aiResponse.text();
+                console.warn(`AI API Error (${aiResponse.status}):`, errorText);
             }
         } catch (apiError) {
             console.error("Failed to reach AI API:", apiError.message);
@@ -59,7 +69,7 @@ export default async function handler(req, res) {
         // 4. Validate and Apply the Move locally using chess.js
         try {
             if (aiMoveSan) {
-                game.move(aiMoveSan); // This will throw an error if the AI hallucinated an illegal move
+                game.move(aiMoveSan); // Will throw an error if the AI hallucinated an illegal move
             } else {
                 throw new Error("No move provided by AI");
             }
@@ -88,7 +98,8 @@ export default async function handler(req, res) {
         return res.status(200).json({
             success: true, 
             txHash: txHash,
-            newFEN: newFEN
+            newFEN: newFEN,
+            newPGN: newPGN
         });
 
     } catch (error) {
