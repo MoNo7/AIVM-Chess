@@ -41,7 +41,7 @@ export default async function handler(req, res) {
             const aiResponse = await fetch("https://api.lightchain-protocol.com/inference", {
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
                     "Authorization": `Bearer ${process.env.LCAI_API_KEY}` 
                 },
                 body: JSON.stringify({
