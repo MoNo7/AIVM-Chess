@@ -56,6 +56,13 @@ button:hover {
     background-color: #2563eb;
 }
 
+label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-bottom: 8px;
+    color: #e0e0e0;
+}
+
 input {
     background: #2a2a2a;
     border: 1px solid #444;
