@@ -7,19 +7,28 @@ export default async function handler(req, res) {
     const { playerAddress, currentFEN } = req.body;
 
     try {
-        // 1. Setup Ethers & Contract
         const provider = new ethers.JsonRpcProvider(process.env.LIGHTCHAIN_RPC_URL);
         const relayerWallet = new ethers.Wallet(process.env.RELAYER_PRIVATE_KEY, provider);
         
         console.log("VERCEL RELAYER FIRING FROM:", relayerWallet.address);
 
-        // Updated ABI to match the new synchronous contract flow
+        // 1. RESTORED ABI: We need both functions to properly sequence the turns
         const fullAbi = [
+            "function requestAIMove(address player, string currentFEN) external returns (uint256)",
             "function submitAIMove(address player, string newFEN, string newPGN) external"
         ];
         const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, fullAbi, relayerWallet);
         
-        // 2. Initialize Game State
+        // 2. FIX FOR THE "AWAITING PLAYER" REVERT:
+        // Tell the blockchain that the player made their move first!
+        try {
+            console.log("Syncing player move to blockchain...");
+            const playerTx = await contract.requestAIMove(playerAddress, currentFEN);
+            await playerTx.wait(); 
+        } catch (syncError) {
+            console.warn("⚠️ Player move sync issue (might already be AI's turn):", syncError.message);
+        }
+
         const game = new Chess(currentFEN);
         if (game.isGameOver()) {
             return res.status(400).json({ success: false, error: "Game is already over" });
@@ -27,12 +36,12 @@ export default async function handler(req, res) {
 
         let aiMoveSan = null;
 
-        // 3. Call the Lightchain Chat V2 API
+        // 3. FIX FOR "FETCH FAILED": Use the exact endpoint and payload from Lightchain docs
         try {
-            const aiResponse = await fetch("https://api.lightchain.ai/v1/chat/completions", {
+            const aiResponse = await fetch("https://api.lightchain-protocol.com/inference", {
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json",
+                    "Content-Type": "application/json"
                     "Authorization": `Bearer ${process.env.LCAI_API_KEY}` 
                 },
                 body: JSON.stringify({
