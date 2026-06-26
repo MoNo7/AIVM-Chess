@@ -24,11 +24,25 @@ export default async function handler(req, res) {
         }
 
         // 2. Fetch AI Inference
+       // const aiResponse = await fetch("https://api.lightchain-protocol.com/inference", {
+       //     method: "POST",
+       //     headers: { "Content-Type": "application/json" },
+        //    body: JSON.stringify({ position: currentFEN })
+       // });
         const aiResponse = await fetch("https://api.lightchain-protocol.com/inference", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${process.env.LCAI_API_KEY}` // Ensure this matches Lightchain's requirements
+            },
             body: JSON.stringify({ position: currentFEN })
         });
+        
+        if (!aiResponse.ok) {
+            const errorText = await aiResponse.text();
+            console.error(`AI API returned ${aiResponse.status}: ${errorText}`);
+            throw new Error(`AI API error: ${aiResponse.status}`);
+        }
 
         const data = await aiResponse.json();
         const aiMove = data.move;
