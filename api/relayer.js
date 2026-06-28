@@ -24,23 +24,19 @@ export default async function handler(req, res) {
         }
 
         // 2. Fetch AI Inference
-       // const aiResponse = await fetch("https://api.lightchain-protocol.com/inference", {
-       //     method: "POST",
-       //     headers: { "Content-Type": "application/json" },
-        //    body: JSON.stringify({ position: currentFEN })
-       // });
         const aiResponse = await fetch("https://testnet.lightchain.ai/your-inference-endpoint", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${process.env.LIGHTCHAIN_API_KEY}` // <-- Add whatever auth the new testnet requires
+                "Authorization": `Bearer ${process.env.LIGHTCHAIN_API_KEY}` 
             },
-            body: JSON.stringify({ fen: currentFen })
+            // FIX 1: Corrected currentFen to currentFEN to match the destructured variable above
+            body: JSON.stringify({ fen: currentFEN }) 
         });
         
         const aiData = await aiResponse.json();
         
-        // 2. NEW: Strict Validation (Fail fast before hitting the contract)
+        // 2b. Strict Validation (Fail fast before hitting the contract)
         if (!aiResponse.ok || !aiData.fen) {
             console.error("AIVM Inference Error:", aiData);
             // Return early so we don't attempt a broken on-chain transaction
@@ -56,4 +52,10 @@ export default async function handler(req, res) {
             console.error("Contract TX Failed:", txError);
             return res.status(500).json({ error: "Smart contract execution failed." });
         }
+
+    // FIX 2: Added the missing catch block to close out the top-level 'try' statement
+    } catch (error) {
+        console.error("Relayer Fatal Error:", error);
+        return res.status(500).json({ error: "Internal relayer initialization or fatal execution error." });
+    }
 }
