@@ -37,17 +37,21 @@ export default async function handler(req, res) {
             })
         });
         
-        const aiData = await aiResponse.json();
+      const responseText = await aiResponse.text();
         
-        if (!aiResponse.ok || !aiData.choices?.[0]?.message?.content) {
-            console.error("Inference Error:", aiData);
-            return res.status(502).json({ error: "AI Inference failed." });
+        if (!aiResponse.ok) {
+            console.error("Inference Error Response:", responseText);
+            return res.status(502).json({ error: "AI Inference failed.", details: responseText });
         }
         
-        const aiMoveFEN = aiData.choices[0].message.content.trim();
+        const aiData = JSON.parse(responseText);
+        const aiMoveFEN = aiData.choices?.[0]?.message?.content?.trim();
 
-        // 3. Submit to Contract
-        // Ensure you have the PGN logic ready; here we pass an empty string if not generated
+        if (!aiMoveFEN) {
+            return res.status(502).json({ error: "AI returned invalid response format." });
+        }
+
+        // 4. Submit to Contract
         const tx = await contract.submitAIMove(playerAddress, aiMoveFEN, "");
         await tx.wait();
         
@@ -55,6 +59,6 @@ export default async function handler(req, res) {
 
     } catch (error) {
         console.error("Relayer Fatal Error:", error);
-        return res.status(500).json({ error: "Execution failed." });
+        return res.status(500).json({ error: "Internal server error during relayer execution." });
     }
 }
