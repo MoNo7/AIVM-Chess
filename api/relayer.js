@@ -24,7 +24,7 @@ export default async function handler(req, res) {
         }
 
         // 2. Fetch AI Inference (REST API Approach)
-        const aiResponse = await fetch(`${process.env.AI_PROVIDER_BASE_URL}/chat/completions`, {
+        const aiResponse = await fetch(`${process.env.LIGHTCHAIN_RPC_URL}/chat/completions`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
