@@ -23,44 +23,47 @@ export default async function handler(req, res) {
             console.warn("Sync warning (possible race):", e.message);
         }
 
-        // 2. Fetch AI Inference
-          const aiResponse = await fetch("https://testnet.lightchain.ai/your-inference-endpoint", {
+        // 2. Fetch AI Inference via JSON-RPC
+        const rpcPayload = {
+            jsonrpc: "2.0",
+            method: "lcai_submitInferenceTask",
+            params: [{
+                model: "lightchain-base-v1",
+                input: currentFEN,
+                maxGas: "0x7a120",
+                callbackContract: process.env.CONTRACT_ADDRESS
+            }],
+            id: 1
+        };
+
+        const aiResponse = await fetch("https://rpc.testnet.lightchain.ai", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${process.env.LIGHTCHAIN_API_KEY}` 
-            },
-            body: JSON.stringify({ fen: currentFEN }) 
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(rpcPayload)
         });
-        
-        // Capture raw response text first
-        const responseText = await aiResponse.text();
-        
-        // Check if it's actually valid JSON before trying to parse it
-        if (!aiResponse.ok) {
-            console.error("AIVM Inference API Error:", aiResponse.status, responseText);
-            return res.status(502).json({ error: "AI Inference API returned an error.", details: responseText });
+
+        const aiData = await aiResponse.json();
+
+        // 2b. Strict Validation
+        if (!aiResponse.ok || aiData.error || !aiData.result) {
+            console.error("AIVM Inference RPC Error:", aiData.error || aiResponse.statusText);
+            return res.status(502).json({ error: "AI Inference RPC returned an error." });
         }
-        
-        let aiData;
+
+        // 3. Task initiated, proceed with contract submission (or handle async callback flow)
         try {
-            aiData = JSON.parse(responseText);
-        } catch (e) {
-            console.error("Failed to parse JSON from AI API. Raw response:", responseText);
-            return res.status(502).json({ error: "Received invalid JSON from AI API." });
-        }
-        
-        // 3. Safe to submit to contract
-        try {
-            const tx = await contract.submitAIMove(playerAddress, aiData.fen, aiData.pgn);
-            await tx.wait();
-            return res.status(200).json({ success: true, fen: aiData.fen });
+            // Note: If the contract requires the result immediately, ensure 
+            // your callback logic is properly handling the async task ID.
+            return res.status(200).json({ 
+                success: true, 
+                taskId: aiData.result.taskId,
+                message: "Inference task submitted successfully." 
+            });
         } catch (txError) {
             console.error("Contract TX Failed:", txError);
             return res.status(500).json({ error: "Smart contract execution failed." });
         }
 
-    // FIX 2: Added the missing catch block to close out the top-level 'try' statement
     } catch (error) {
         console.error("Relayer Fatal Error:", error);
         return res.status(500).json({ error: "Internal relayer initialization or fatal execution error." });
