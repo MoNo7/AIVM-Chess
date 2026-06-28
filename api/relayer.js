@@ -24,6 +24,7 @@ export default async function handler(req, res) {
         }
 
         // 2. Fetch AI Inference (REST API Approach)
+        console.log("Sending to relayer:", { playerAddress, currentFEN });
         const aiResponse = await fetch(`${process.env.LIGHTCHAIN_RPC_URL}/chat/completions`, {
             method: "POST",
             headers: {
