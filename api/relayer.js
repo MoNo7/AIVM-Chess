@@ -38,10 +38,12 @@ export default async function handler(req, res) {
         
         // 2b. Strict Validation (Fail fast before hitting the contract)
         if (!aiResponse.ok || !aiData.fen) {
-            console.error("AIVM Inference Error:", aiData);
-            // Return early so we don't attempt a broken on-chain transaction
-            return res.status(502).json({ error: "AIVM inference failed. Move aborted." });
+            const errorText = await aiResponse.text(); // Get raw text to debug
+            console.error("AIVM Inference API Error:", aiResponse.status, errorText);
+            return res.status(502).json({ error: "AI Inference API returned an error." });
         }
+
+        const aiData = await aiResponse.json();
         
         // 3. Safe to submit to contract
         try {
