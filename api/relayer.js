@@ -43,7 +43,6 @@ export default async function handler(req, res) {
             return res.status(502).json({ error: "AI Inference API returned an error." });
         }
 
-        const aiData = await aiResponse.json();
         
         // 3. Safe to submit to contract
         try {
