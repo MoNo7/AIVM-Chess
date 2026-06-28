@@ -327,7 +327,7 @@ async function onDrop(source, target) {
         boardConfig.draggable = false; // Lock the board so they can't move twice
         
         // Ping the Relayer. We don't need a blockchain transaction from the user here!
-        console.log("Sending to relayer:", { playerAddress, currentFEN });
+        console.log("Sending to relayer:", { playerAddress: userAddress, currentFEN: game.fen() });
         const response = await fetch('/api/relayer', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
