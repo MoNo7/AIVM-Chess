@@ -43,28 +43,15 @@ async function connectWallet() {
             return;
         }
 
-        // 1. Safely fetch the contract address (Self-contained scope)
-        try {
-            const response = await fetch('/api/config');
-            if (response.ok) {
-                const data = await response.json();
-                if (data.contractAddress) {
-                    CONTRACT_ADDRESS = data.contractAddress;
-                    console.log("Dynamically loaded contract:", CONTRACT_ADDRESS);
-                }
-            }
-        } catch (fetchError) {
-            console.warn("Dynamic load failed. Using fallback address:", CONTRACT_ADDRESS);
-        }
-
-        // 2. Final security check before starting ethers
+        // 1. Final security check before starting ethers
+        // (CONTRACT_ADDRESS is already loaded by window.onload)
         if (!CONTRACT_ADDRESS || CONTRACT_ADDRESS === "") {
             console.error("No contract address available.");
-            alert("Critical Error: Contract address is missing!");
+            alert("Critical Error: Contract address is missing! Check Vercel config.");
             return;
         }
 
-        // 3. Initialize Ethers.js
+        // 2. Initialize Ethers.js
         provider = new ethers.BrowserProvider(window.ethereum);
         const accounts = await provider.send("eth_requestAccounts", []);
         userAddress = accounts[0];
@@ -72,7 +59,7 @@ async function connectWallet() {
         
         contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
         
-        // 4. Update UI Elements
+        // 3. Update UI Elements
         const walletDisplay = document.getElementById('wallet-address');
         const connectBtn = document.getElementById('connect-btn');
         const boardContainer = document.getElementById('board-container');
@@ -99,7 +86,7 @@ async function connectWallet() {
             board.resize();
         }
         
-        // 5. Verify states
+        // 4. Verify states
         checkActiveGame(userAddress);
         refreshVaultStats();
         
