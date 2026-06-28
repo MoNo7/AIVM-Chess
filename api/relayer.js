@@ -24,25 +24,31 @@ export default async function handler(req, res) {
         }
 
         // 2. Fetch AI Inference
-        const aiResponse = await fetch("https://testnet.lightchain.ai/your-inference-endpoint", {
+          const aiResponse = await fetch("https://testnet.lightchain.ai/your-inference-endpoint", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${process.env.LIGHTCHAIN_API_KEY}` 
             },
-            // FIX 1: Corrected currentFen to currentFEN to match the destructured variable above
             body: JSON.stringify({ fen: currentFEN }) 
         });
         
-        const aiData = await aiResponse.json();
+        // Capture raw response text first
+        const responseText = await aiResponse.text();
         
-        // 2b. Strict Validation (Fail fast before hitting the contract)
-        if (!aiResponse.ok || !aiData.fen) {
-            const errorText = await aiResponse.text(); // Get raw text to debug
-            console.error("AIVM Inference API Error:", aiResponse.status, errorText);
-            return res.status(502).json({ error: "AI Inference API returned an error." });
+        // Check if it's actually valid JSON before trying to parse it
+        if (!aiResponse.ok) {
+            console.error("AIVM Inference API Error:", aiResponse.status, responseText);
+            return res.status(502).json({ error: "AI Inference API returned an error.", details: responseText });
         }
-
+        
+        let aiData;
+        try {
+            aiData = JSON.parse(responseText);
+        } catch (e) {
+            console.error("Failed to parse JSON from AI API. Raw response:", responseText);
+            return res.status(502).json({ error: "Received invalid JSON from AI API." });
+        }
         
         // 3. Safe to submit to contract
         try {
