@@ -29,33 +29,31 @@ export default async function handler(req, res) {
        //     headers: { "Content-Type": "application/json" },
         //    body: JSON.stringify({ position: currentFEN })
        // });
-        const aiResponse = await fetch("https://api.lightchain-protocol.com/inference", {
+        const aiResponse = await fetch("https://testnet.lightchain.ai/your-inference-endpoint", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${process.env.LCAI_API_KEY}` // Ensure this matches Lightchain's requirements
+                "Authorization": `Bearer ${process.env.LIGHTCHAIN_API_KEY}` // <-- Add whatever auth the new testnet requires
             },
-            body: JSON.stringify({ position: currentFEN })
+            body: JSON.stringify({ fen: currentFen })
         });
         
-        if (!aiResponse.ok) {
-            const errorText = await aiResponse.text();
-            console.error(`AI API returned ${aiResponse.status}: ${errorText}`);
-            throw new Error(`AI API error: ${aiResponse.status}`);
-        }
-
-        const data = await aiResponse.json();
-        const aiMove = data.move;
-
-        // 3. Apply and Submit AI Move
-        const game = new Chess(currentFEN);
-        game.move(aiMove);
+        const aiData = await aiResponse.json();
         
-        const txSubmit = await contract.submitAIMove(playerAddress, game.fen(), game.pgn());
-        await txSubmit.wait();
-
-        return res.status(200).json({ success: true, newFEN: game.fen() });
-    } catch (error) {
-        return res.status(500).json({ success: false, error: error.message });
-    }
+        // 2. NEW: Strict Validation (Fail fast before hitting the contract)
+        if (!aiResponse.ok || !aiData.fen) {
+            console.error("AIVM Inference Error:", aiData);
+            // Return early so we don't attempt a broken on-chain transaction
+            return res.status(502).json({ error: "AIVM inference failed. Move aborted." });
+        }
+        
+        // 3. Safe to submit to contract
+        try {
+            const tx = await contract.submitAIMove(playerAddress, aiData.fen, aiData.pgn);
+            await tx.wait();
+            return res.status(200).json({ success: true, fen: aiData.fen });
+        } catch (txError) {
+            console.error("Contract TX Failed:", txError);
+            return res.status(500).json({ error: "Smart contract execution failed." });
+        }
 }
