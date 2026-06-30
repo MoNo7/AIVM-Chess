@@ -10,7 +10,8 @@ export default async function handler(req, res) {
         const relayerWallet = new ethers.Wallet(process.env.RELAYER_PRIVATE_KEY, provider);
         
         const fullAbi = [
-            "function requestAIMove(address player, string currentFEN) external returns (uint256)",
+           // "function requestAIMove(address player, string currentFEN) external returns (uint256)",
+            "function requestAIMove(address player, string memory currentFEN) external returns (uint256)",
             "function submitAIMove(address player, string newFEN, string newPGN) external"
         ];
         //const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, fullAbi, relayerWallet);
