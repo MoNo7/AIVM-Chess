@@ -13,14 +13,33 @@ export default async function handler(req, res) {
             "function requestAIMove(address player, string currentFEN) external returns (uint256)",
             "function submitAIMove(address player, string newFEN, string newPGN) external"
         ];
-        const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, fullAbi, relayerWallet);
-        
+        //const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, fullAbi, relayerWallet);
+                
         // 1. Sync Player Move
         try {
-            const txSync = await contract.requestAIMove(playerAddress, currentFEN);
-            await txSync.wait();
+            const contract = new ethers.Contract(CONTRACT_ADDRESS, abi, relayerWallet);
+            const txSync = await contract.requestAIMove(playerAddress, currentFEN, {
+                gasLimit: 500000 
+            });
+            
+            //const txSync = await contract.requestAIMove(playerAddress, currentFEN);
+            //await txSync.wait();
+            const receipt = await txSync.wait();
+
+            // 4. Return a successful 200 response to the frontend
+            return res.status(200).json({ 
+                success: true, 
+                txHash: receipt.hash 
+            });
+            
         } catch (e) {
             console.warn("Sync warning:", e.message);
+            console.error("Relayer execution failed:", e );
+
+            return res.status(400).json({ 
+                success: false, 
+                error: "AI Inference failed to trigger on-chain. Please verify match state." 
+            });
         }
 
         // 2. Fetch AI Inference (REST API Approach)
