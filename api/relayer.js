@@ -17,7 +17,7 @@ export default async function handler(req, res) {
                 
         // 1. Sync Player Move
         try {
-            const contract = new ethers.Contract(CONTRACT_ADDRESS, abi, relayerWallet);
+            const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, abi, relayerWallet);
             const txSync = await contract.requestAIMove(playerAddress, currentFEN, {
                 gasLimit: 500000 
             });
