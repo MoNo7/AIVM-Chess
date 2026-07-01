@@ -9,33 +9,32 @@ export default async function handler(req, res) {
         const provider = new ethers.JsonRpcProvider(process.env.LIGHTCHAIN_RPC_URL);
         const relayerWallet = new ethers.Wallet(process.env.RELAYER_PRIVATE_KEY, provider);
         
-        // Use the specific ABI for the function you are calling
-        const abi = [
+        // Define the interface specifically
+        const iface = new ethers.Interface([
             "function requestAIMove(address player, string memory currentFEN) external returns (uint256)"
-        ];
+        ]);
         
-        const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, abi, relayerWallet);
-        console.log("Functions in ABI:", contract.interface.fragments.map(f => f.name));
+        // Manually encode the data
+        const data = iface.encodeFunctionData("requestAIMove", [playerAddress, currentFEN]);
         
-        console.log("Attempting requestAIMove on:", process.env.CONTRACT_ADDRESS);
+        console.log("Encoded Data Payload:", data);
 
-        // Perform the transaction
-        const tx = await contract.requestAIMove(playerAddress, currentFEN, {
+        // Send raw transaction
+        const tx = await relayerWallet.sendTransaction({
+            to: process.env.CONTRACT_ADDRESS,
+            data: data,
             gasLimit: 800000
         });
         
         const receipt = await tx.wait();
-
-        return res.status(200).json({ 
-            success: true, 
-            txHash: receipt.hash 
-        });
+        return res.status(200).json({ success: true, txHash: receipt.hash });
             
     } catch (e) {
+        // Log the full error to see if it's the 'onlyRelayer' modifier
         console.error("Relayer execution failed:", e);
         return res.status(400).json({ 
             success: false, 
-            error: e.reason || "Transaction failed. Please ensure contract is deployed and address is correct." 
+            error: "Transaction reverted. Check if the Relayer Wallet is authorized in the contract." 
         });
     }
 }
