@@ -26,6 +26,8 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true, txHash: receipt.hash });
             
     } catch (e) {
+        const rawData = e.data || (e.info && e.info.error && e.info.error.data);
+        console.error("DEBUG - Full Revert Data:", rawData); // Look at this in Vercel logs!
         // Log the full error to Vercel console so you can see it in the dashboard
         console.error("Relayer execution failed:", e);
 
