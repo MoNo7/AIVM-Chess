@@ -59,20 +59,23 @@ export default async function handler(req, res) {
             
     } catch (e) {
         console.error("Relayer execution failed:", e);
-        
-        const rawData = e.data || (e.info && e.info.error && e.info.error.data);
+
+        // Safely extract revert data using the catch variable 'e'
+        const rawData = e.data || (e.info && e.info.error && e.info.error.data) || (e.receipt && e.receipt.data);
         console.error("DEBUG - Full Revert Data:", rawData);
-        
-        if (rawData.data) {
-            console.log("Raw Revert Data:", error.data);
-        } else if (error.receipt && error.receipt.revertReason) {
-            console.log("Revert Reason:", error.receipt.revertReason);
+
+        // Use 'e' consistently instead of 'error'
+        if (rawData) {
+            console.log("Raw Revert Data detected:", rawData);
+        } else if (e.receipt && e.receipt.revertReason) {
+            console.log("Revert Reason:", e.receipt.revertReason);
         } else {
-            console.log("Full error object:", error);
+            console.log("Full error object captured:", e);
         }
 
         let errorMessage = e.reason || e.shortMessage || e.message || "Unknown Error";
 
+        // Attempt to decode Solidity Error(string)
         if (rawData && typeof rawData === 'string' && rawData.startsWith("0x08c379a0")) {
             try {
                 const iface = new ethers.Interface(["function Error(string)"]);
