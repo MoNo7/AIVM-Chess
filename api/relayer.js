@@ -9,17 +9,15 @@ export default async function handler(req, res) {
         const provider = new ethers.JsonRpcProvider(process.env.LIGHTCHAIN_RPC_URL);
         const relayerWallet = new ethers.Wallet(process.env.RELAYER_PRIVATE_KEY, provider);
         
-        // 1. Initialize the contract instance HERE
+        // Added 'payable' to the ABI so it accepts value
         const abi = [
             "function requestAIMove(address player, string memory currentFEN) external payable returns (uint256)"
         ];
         const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, abi, relayerWallet);
 
-        // 2. Now you can use contract.requestAIMove
-        // Use staticCall to catch the revert reason string
         const revertReason = await contract.requestAIMove.staticCall(playerAddress, currentFEN);
         
-        const GAS_PER_MOVE = ethers.parseEther("0.5"); // Adjust to match your contract's constant
+        const GAS_PER_MOVE = ethers.parseEther("0.5");
 
         const tx = await contract.requestAIMove(playerAddress, currentFEN, {
             value: GAS_PER_MOVE 
@@ -29,13 +27,11 @@ export default async function handler(req, res) {
             
     } catch (e) {
         const rawData = e.data || (e.info && e.info.error && e.info.error.data);
-        console.error("DEBUG - Full Revert Data:", rawData); // Look at this in Vercel logs!
-        // Log the full error to Vercel console so you can see it in the dashboard
+        console.error("DEBUG - Full Revert Data:", rawData); 
         console.error("Relayer execution failed:", e);
 
         let errorMessage = e.reason || e.shortMessage || e.message || "Unknown Error";
 
-        // Try to decode Ethers revert data
         const revertData = e.data || (e.info && e.info.error && e.info.error.data);
 
         if (revertData && typeof revertData === 'string' && revertData.startsWith("0x08c379a0")) {
