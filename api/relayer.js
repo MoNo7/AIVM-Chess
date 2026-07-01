@@ -1,7 +1,7 @@
 import { ethers } from 'ethers';
 
 export default async function handler(req, res) {
-    if (req.method !== 'POST') return res.status(405).end();
+    if (req.method !== 'POST') return res.status(405).json({ error: "Method not allowed" });
     
     const { playerAddress, currentFEN } = req.body;
 
@@ -37,83 +37,76 @@ export default async function handler(req, res) {
             }
         ];
         
-        const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, abi, relayerWallet);
+        const contractAddress = process.env.CONTRACT_ADDRESS;
+        const contract = new ethers.Contract(contractAddress, abi, relayerWallet);
         
         const GAS_PER_MOVE = ethers.parseEther("0.5");
 
-        // Debug Logs
+        // --- Debug Logs ---
+        console.log(`[Relayer] Initiating AI move for ${playerAddress}. FEN: ${currentFEN}`);
         console.log("DEBUG - Using Model Digest:", await contract.CHESS_AI_MODEL_DIGEST());
-        console.log("DEBUG - Calling Contract:", process.env.CONTRACT_ADDRESS);
+        console.log("DEBUG - Calling Contract:", contractAddress);
         
         const anchor = await contract.inferenceAnchor();
         console.log("DEBUG - Current Inference Anchor:", anchor);
 
-        const unsignedTx = await contract.requestAIMove.populateTransaction(playerAddress, currentFEN, { value: ethers.parseEther("0.5"), gasLimit: 3000000 });
+        // 1. Simulate the transaction first using staticCall
+        // If this fails, it will immediately throw to the catch block, saving you gas.
+        console.log("[Relayer] Simulating transaction via staticCall...");
+        await contract.requestAIMove.staticCall(playerAddress, currentFEN, { 
+            value: GAS_PER_MOVE, 
+            gasLimit: 3000000 
+        });
 
-        try {
-            await contract.requestAIMove.staticCall(playerAddress, currentFEN, { value: GAS_PER_MOVE, gasLimit: 3000000 })
-        } catch (staticError) {
-            console.error("STATIC CALL FAILED - REVERT REASON:", staticError.reason || staticError.info?.error?.message);
-            // You can also inspect staticError.data here if it exists
-            console.error("STATIC CALL FAILED!");
-            // This logs the full error object so we can see if it has 'data'
-            console.error("Full staticError object:", staticError); 
-            
-            // Specifically log the hex data if it exists
-            if (staticError.data) {
-                console.log("Raw Revert Hex Data:", staticError.data);
-            }
-        }
-
-        const wallet = new ethers.Wallet(process.env.RELAYER_PRIVATE_KEY, provider);
-        const signer = wallet.connect(provider); // Make sure this is defined in your scope
-
-        const tx = await signer.sendTransaction({
-            to: process.env.CONTRACT_ADDRESS,
-            data: unsignedTx.data, // THIS IS LIKELY WHAT IS MISSING
-            value: ethers.parseEther("0.5") 
+        // 2. If staticCall succeeds, execute the actual transaction
+        console.log("[Relayer] Simulation passed. Sending transaction...");
+        const tx = await contract.requestAIMove(playerAddress, currentFEN, {
+            value: GAS_PER_MOVE,
+            gasLimit: 3000000
         });
         
-        //const tx = await contract.requestAIMove(playerAddress, currentFEN, {
-        //    value: GAS_PER_MOVE,
-        //    gasLimit: 3000000
-        //});
-        
+        console.log(`[Relayer] TX sent: ${tx.hash}`);
         const receipt = await tx.wait();
+        
         return res.status(200).json({ success: true, txHash: receipt.hash });
             
-    } catch (e) {
-        console.error("Relayer execution failed:", e);
+    } catch (error) {
+        console.error("[Relayer] Execution Failed:", error);
 
-        // Safely extract revert data using the catch variable 'e'
-        const rawData = e.data || (e.info && e.info.error && e.info.error.data) || (e.receipt && e.receipt.data);
-        console.error("DEBUG - Full Revert Data:", rawData);
+        // Safely extract revert data
+        const rawData = error.data || (error.info && error.info.error && error.info.error.data) || (error.receipt && error.receipt.data) || null;
+        
+        if (rawData) console.error("DEBUG - Raw Revert Data:", rawData);
 
-        // Use 'e' consistently instead of 'error'
-        if (rawData) {
-            console.log("Raw Revert Data detected:", rawData);
-        } else if (e.receipt && e.receipt.revertReason) {
-            console.log("Revert Reason:", e.receipt.revertReason);
-        } else {
-            console.log("Full error object captured:", e);
+        let userMessage = "An unknown error occurred during the AI request.";
+        let errorCode = "UNKNOWN_ERROR";
+
+        // Ethers v6 Error Decoding
+        if (error.code === 'CALL_EXCEPTION') {
+            errorCode = "CONTRACT_REVERT";
+            userMessage = error.reason || error.shortMessage || "The smart contract reverted the transaction.";
+        } else if (error.code === 'INSUFFICIENT_FUNDS') {
+            errorCode = "GAS_FUNDS_LOW";
+            userMessage = "The relayer wallet is out of gas funds.";
         }
 
-        let errorMessage = e.reason || e.shortMessage || e.message || "Unknown Error";
-
-        // Attempt to decode Solidity Error(string)
-        if (rawData && typeof rawData === 'string' && rawData.startsWith("0x08c379a0")) {
+        // Attempt to manually decode Solidity Error(string) if we have raw hex data but no parsed reason
+        if (!error.reason && rawData && typeof rawData === 'string' && rawData.startsWith("0x08c379a0")) {
             try {
                 const iface = new ethers.Interface(["function Error(string)"]);
                 const decoded = iface.decodeFunctionData("Error", rawData);
-                errorMessage = decoded[0];
+                userMessage = decoded[0];
             } catch (err) {
                 console.error("Failed to decode revert reason:", err);
             }
         }
 
-        return res.status(400).json({ 
+        // Return a structured 500 response so the frontend can display it cleanly
+        return res.status(500).json({ 
             success: false, 
-            error: errorMessage 
+            code: errorCode,
+            message: userMessage,
+            rawHex: rawData
         });
     }
 }
