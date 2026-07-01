@@ -48,11 +48,25 @@ export default async function handler(req, res) {
         const anchor = await contract.inferenceAnchor();
         console.log("DEBUG - Current Inference Anchor:", anchor);
 
-        // Execute the actual transaction (No staticCall here)
-        const tx = await contract.requestAIMove(playerAddress, currentFEN, {
-            value: GAS_PER_MOVE,
-            gasLimit: 3000000
+        const unsignedTx = await contract.requestAIMove.populateTransaction(playerAddress, currentFEN, { value: ethers.parseEther("0.5"), gasLimit: 3000000 });
+
+        try {
+            await contract.requestAIMove.staticCall(playerAddress, currentFEN, { value: GAS_PER_MOVE, gasLimit: 3000000 })
+        } catch (staticError) {
+            console.error("STATIC CALL FAILED - REVERT REASON:", staticError.reason || staticError.info?.error?.message);
+            // You can also inspect staticError.data here if it exists
+        }
+
+        const tx = await signer.sendTransaction({
+            to: contractAddress,
+            data: unsignedTx.data, // THIS IS LIKELY WHAT IS MISSING
+            value: ethers.parseEther("0.5") 
         });
+        
+        //const tx = await contract.requestAIMove(playerAddress, currentFEN, {
+        //    value: GAS_PER_MOVE,
+        //    gasLimit: 3000000
+        //});
         
         const receipt = await tx.wait();
         return res.status(200).json({ success: true, txHash: receipt.hash });
