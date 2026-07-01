@@ -1,7 +1,7 @@
 import { ethers } from 'ethers';
 
 export default async function handler(req, res) {
-    if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Method Not Allowed' });
+    if (req.method !== 'POST') return res.status(405).end();
     
     const { playerAddress, currentFEN } = req.body;
 
@@ -9,28 +9,28 @@ export default async function handler(req, res) {
         const provider = new ethers.JsonRpcProvider(process.env.LIGHTCHAIN_RPC_URL);
         const relayerWallet = new ethers.Wallet(process.env.RELAYER_PRIVATE_KEY, provider);
         
-        // Define the interface specifically
-        const iface = new ethers.Interface([
+        // 1. Initialize the contract instance HERE
+        const abi = [
             "function requestAIMove(address player, string memory currentFEN) external returns (uint256)"
-        ]);
+        ];
+        const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, abi, relayerWallet);
+
+        // 2. Now you can use contract.requestAIMove
+        // Use staticCall to catch the revert reason string
+        const revertReason = await contract.requestAIMove.staticCall(playerAddress, currentFEN);
         
-        await contract.requestAIMove.staticCall(playerAddress, currentFEN, {
-            gasLimit: 800000
-        });
-        
-        // 2. If simulation passes, execute the real transaction
-        const tx = await contract.requestAIMove(playerAddress, currentFEN, {
-            gasLimit: 800000
-        });
+        // 3. If it passes, send the real transaction
+        const tx = await contract.requestAIMove(playerAddress, currentFEN);
         const receipt = await tx.wait();
+        
         return res.status(200).json({ success: true, txHash: receipt.hash });
             
     } catch (e) {
-        // Log the full error to see if it's the 'onlyRelayer' modifier
+        // This will now print the actual Solidity revert reason
         console.error("Relayer execution failed:", e);
         return res.status(400).json({ 
             success: false, 
-            error: "Transaction reverted. Check if the Relayer Wallet is authorized in the contract." 
+            error: e.reason || e.message || "Transaction reverted" 
         });
     }
 }
