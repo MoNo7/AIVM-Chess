@@ -65,6 +65,9 @@ export default async function handler(req, res) {
             }
         }
 
+        const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+        const signer = wallet.connect(provider); // Make sure this is defined in your scope
+
         const tx = await signer.sendTransaction({
             to: contractAddress,
             data: unsignedTx.data, // THIS IS LIKELY WHAT IS MISSING
