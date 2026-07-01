@@ -26,22 +26,28 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true, txHash: receipt.hash });
             
     } catch (e) {
-        let errorMessage = e.message;
-    
-        // Check for standard Solidity Error selector
-        if (e.data && e.data.startsWith("0x08c379a0")) {
+        // Log the full error to Vercel console so you can see it in the dashboard
+        console.error("Relayer execution failed:", e);
+
+        let errorMessage = e.reason || e.shortMessage || e.message;
+
+        // Ethers v6 often hides the revert data in the 'data' property
+        // or inside 'e.info.error.data' for some providers
+        const revertData = e.data || (e.info && e.info.error && e.info.error.data);
+
+        if (revertData && revertData.startsWith("0x08c379a0")) {
             try {
                 const iface = new ethers.Interface(["function Error(string)"]);
-                const decoded = iface.decodeFunctionData("Error", e.data);
+                const decoded = iface.decodeFunctionData("Error", revertData);
                 errorMessage = decoded[0];
             } catch (err) {
-                console.error("Failed to decode revert reason", err);
+                console.error("Failed to decode revert reason:", err);
             }
         }
-        
+
         return res.status(400).json({ 
             success: false, 
-            error: `AIVM Coordinator Reverted: ${errorMessage}` 
+            error: errorMessage 
         });
     }
 }
