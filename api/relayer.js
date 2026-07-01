@@ -55,6 +55,14 @@ export default async function handler(req, res) {
         } catch (staticError) {
             console.error("STATIC CALL FAILED - REVERT REASON:", staticError.reason || staticError.info?.error?.message);
             // You can also inspect staticError.data here if it exists
+            console.error("STATIC CALL FAILED!");
+            // This logs the full error object so we can see if it has 'data'
+            console.error("Full staticError object:", staticError); 
+            
+            // Specifically log the hex data if it exists
+            if (staticError.data) {
+                console.log("Raw Revert Hex Data:", staticError.data);
+            }
         }
 
         const tx = await signer.sendTransaction({
