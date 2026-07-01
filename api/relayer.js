@@ -50,7 +50,8 @@ export default async function handler(req, res) {
 
         // Execute the actual transaction (No staticCall here)
         const tx = await contract.requestAIMove(playerAddress, currentFEN, {
-            value: GAS_PER_MOVE 
+            value: GAS_PER_MOVE,
+            gasLimit: 3000000
         });
         
         const receipt = await tx.wait();
