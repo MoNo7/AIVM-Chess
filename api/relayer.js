@@ -18,12 +18,16 @@ export default async function handler(req, res) {
         const revertReason = await contract.requestAIMove.staticCall(playerAddress, currentFEN);
         
         const GAS_PER_MOVE = ethers.parseEther("0.5");
+        // Add this log in your relayer.js
+        console.log("DEBUG - Calling Contract:", process.env.CONTRACT_ADDRESS);
+        console.log("DEBUG - Inference Anchor:", await contract.inferenceAnchor()); // This will confirm if the anchor is actually set
 
         const tx = await contract.requestAIMove(playerAddress, currentFEN, {
             value: GAS_PER_MOVE 
         });
         const receipt = await tx.wait();
         return res.status(200).json({ success: true, txHash: receipt.hash });
+        
             
     } catch (e) {
         const rawData = e.data || (e.info && e.info.error && e.info.error.data);
