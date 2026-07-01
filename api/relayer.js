@@ -14,18 +14,14 @@ export default async function handler(req, res) {
             "function requestAIMove(address player, string memory currentFEN) external returns (uint256)"
         ]);
         
-        // Manually encode the data
-        const data = iface.encodeFunctionData("requestAIMove", [playerAddress, currentFEN]);
-        
-        console.log("Encoded Data Payload:", data);
-
-        // Send raw transaction
-        const tx = await relayerWallet.sendTransaction({
-            to: process.env.CONTRACT_ADDRESS,
-            data: data,
+        await contract.requestAIMove.staticCall(playerAddress, currentFEN, {
             gasLimit: 800000
         });
         
+        // 2. If simulation passes, execute the real transaction
+        const tx = await contract.requestAIMove(playerAddress, currentFEN, {
+            gasLimit: 800000
+        });
         const receipt = await tx.wait();
         return res.status(200).json({ success: true, txHash: receipt.hash });
             
