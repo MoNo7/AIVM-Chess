@@ -11,7 +11,7 @@ export default async function handler(req, res) {
         
         // 1. Initialize the contract instance HERE
         const abi = [
-            "function requestAIMove(address player, string memory currentFEN) external returns (uint256)"
+            "function requestAIMove(address player, string memory currentFEN) external payable returns (uint256)"
         ];
         const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, abi, relayerWallet);
 
