@@ -26,11 +26,12 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true, txHash: receipt.hash });
             
     } catch (e) {
-        // This will now print the actual Solidity revert reason
         console.error("Relayer execution failed:", e);
+        // Add logic to check if it's an Out of Gas error or a Revert
+        const errorDetails = e.data || e.reason || e.message;
         return res.status(400).json({ 
             success: false, 
-            error: e.reason || e.message || "Transaction reverted" 
+            error: `Relayer Error: ${errorDetails}` 
         });
     }
 }
