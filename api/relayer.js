@@ -18,9 +18,16 @@ export default async function handler(req, res) {
         const revertReason = await contract.requestAIMove.staticCall(playerAddress, currentFEN);
         
         const GAS_PER_MOVE = ethers.parseEther("0.5");
-        // Add this log in your relayer.js
+
+        // Add these logs in api/relayer.js before the contract call
+       
+        
+        // Log the specific model digest being used
+        console.log("DEBUG - Using Model Digest:", await contract.CHESS_AI_MODEL_DIGEST());
         console.log("DEBUG - Calling Contract:", process.env.CONTRACT_ADDRESS);
         console.log("DEBUG - Inference Anchor:", await contract.inferenceAnchor()); // This will confirm if the anchor is actually set
+        const anchor = await contract.inferenceAnchor();
+        console.log("DEBUG - Current Inference Anchor:", anchor);
 
         const tx = await contract.requestAIMove(playerAddress, currentFEN, {
             value: GAS_PER_MOVE 
