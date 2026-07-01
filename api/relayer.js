@@ -58,18 +58,25 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true, txHash: receipt.hash });
             
     } catch (e) {
-        const rawData = e.data || (e.info && e.info.error && e.info.error.data);
-        console.error("DEBUG - Full Revert Data:", rawData); 
         console.error("Relayer execution failed:", e);
+        
+        const rawData = e.data || (e.info && e.info.error && e.info.error.data);
+        console.error("DEBUG - Full Revert Data:", rawData);
+        
+        if (rawData.data) {
+            console.log("Raw Revert Data:", error.data);
+        } else if (error.receipt && error.receipt.revertReason) {
+            console.log("Revert Reason:", error.receipt.revertReason);
+        } else {
+            console.log("Full error object:", error);
+        }
 
         let errorMessage = e.reason || e.shortMessage || e.message || "Unknown Error";
 
-        const revertData = e.data || (e.info && e.info.error && e.info.error.data);
-
-        if (revertData && typeof revertData === 'string' && revertData.startsWith("0x08c379a0")) {
+        if (rawData && typeof rawData === 'string' && rawData.startsWith("0x08c379a0")) {
             try {
                 const iface = new ethers.Interface(["function Error(string)"]);
-                const decoded = iface.decodeFunctionData("Error", revertData);
+                const decoded = iface.decodeFunctionData("Error", rawData);
                 errorMessage = decoded[0];
             } catch (err) {
                 console.error("Failed to decode revert reason:", err);
