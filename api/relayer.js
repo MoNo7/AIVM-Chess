@@ -9,6 +9,7 @@ export default async function handler(req, res) {
         const provider = new ethers.JsonRpcProvider(process.env.LIGHTCHAIN_RPC_URL);
         const relayerWallet = new ethers.Wallet(process.env.RELAYER_PRIVATE_KEY, provider);
         
+        // Use the specific ABI for the function you are calling
         const abi = [
             "function requestAIMove(address player, string memory currentFEN) external returns (uint256)"
         ];
