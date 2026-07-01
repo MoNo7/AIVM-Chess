@@ -69,7 +69,7 @@ export default async function handler(req, res) {
         const signer = wallet.connect(provider); // Make sure this is defined in your scope
 
         const tx = await signer.sendTransaction({
-            to: contractAddress,
+            to: process.env.CONTRACT_ADDRESS,
             data: unsignedTx.data, // THIS IS LIKELY WHAT IS MISSING
             value: ethers.parseEther("0.5") 
         });
