@@ -9,32 +9,52 @@ export default async function handler(req, res) {
         const provider = new ethers.JsonRpcProvider(process.env.LIGHTCHAIN_RPC_URL);
         const relayerWallet = new ethers.Wallet(process.env.RELAYER_PRIVATE_KEY, provider);
         
-        // Added 'payable' to the ABI so it accepts value
+        // Updated ABI to include 'payable' and the view functions for logging
         const abi = [
-            "function requestAIMove(address player, string memory currentFEN) external payable returns (uint256)"
+            {
+              "inputs": [
+                { "internalType": "address", "name": "player", "type": "address" },
+                { "internalType": "string", "name": "fen", "type": "string" }
+              ],
+              "name": "requestAIMove",
+              "outputs": [],
+              "stateMutability": "payable", 
+              "type": "function"
+            },
+            {
+              "inputs": [],
+              "name": "CHESS_AI_MODEL_DIGEST",
+              "outputs": [{ "internalType": "bytes32", "name": "", "type": "bytes32" }],
+              "stateMutability": "view",
+              "type": "function"
+            },
+            {
+              "inputs": [],
+              "name": "inferenceAnchor",
+              "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+              "stateMutability": "view",
+              "type": "function"
+            }
         ];
+        
         const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, abi, relayerWallet);
-
-        const revertReason = await contract.requestAIMove.staticCall(playerAddress, currentFEN);
         
         const GAS_PER_MOVE = ethers.parseEther("0.5");
 
-        // Add these logs in api/relayer.js before the contract call
-       
-        
-        // Log the specific model digest being used
+        // Debug Logs
         console.log("DEBUG - Using Model Digest:", await contract.CHESS_AI_MODEL_DIGEST());
         console.log("DEBUG - Calling Contract:", process.env.CONTRACT_ADDRESS);
-        console.log("DEBUG - Inference Anchor:", await contract.inferenceAnchor()); // This will confirm if the anchor is actually set
+        
         const anchor = await contract.inferenceAnchor();
         console.log("DEBUG - Current Inference Anchor:", anchor);
 
+        // Execute the actual transaction (No staticCall here)
         const tx = await contract.requestAIMove(playerAddress, currentFEN, {
             value: GAS_PER_MOVE 
         });
+        
         const receipt = await tx.wait();
         return res.status(200).json({ success: true, txHash: receipt.hash });
-        
             
     } catch (e) {
         const rawData = e.data || (e.info && e.info.error && e.info.error.data);
