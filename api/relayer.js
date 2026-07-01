@@ -15,6 +15,7 @@ export default async function handler(req, res) {
         ];
         
         const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, abi, relayerWallet);
+        console.log("Functions in ABI:", contract.interface.fragments.map(f => f.name));
         
         console.log("Attempting requestAIMove on:", process.env.CONTRACT_ADDRESS);
 
