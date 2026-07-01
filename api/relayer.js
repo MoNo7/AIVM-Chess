@@ -26,12 +26,22 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true, txHash: receipt.hash });
             
     } catch (e) {
-        console.error("Relayer execution failed:", e);
-        // Add logic to check if it's an Out of Gas error or a Revert
-        const errorDetails = e.data || e.reason || e.message;
+        let errorMessage = e.message;
+    
+        // Check for standard Solidity Error selector
+        if (e.data && e.data.startsWith("0x08c379a0")) {
+            try {
+                const iface = new ethers.Interface(["function Error(string)"]);
+                const decoded = iface.decodeFunctionData("Error", e.data);
+                errorMessage = decoded[0];
+            } catch (err) {
+                console.error("Failed to decode revert reason", err);
+            }
+        }
+        
         return res.status(400).json({ 
             success: false, 
-            error: `Relayer Error: ${errorDetails}` 
+            error: `AIVM Coordinator Reverted: ${errorMessage}` 
         });
     }
 }
