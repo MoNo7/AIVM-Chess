@@ -22,35 +22,20 @@ export default async function handler(req, res) {
         // 3. If it passes, send the real transaction
         const tx = await contract.requestAIMove(playerAddress, currentFEN);
         const receipt = await tx.wait();
-        
         return res.status(200).json({ success: true, txHash: receipt.hash });
             
-    }catch (bytes memory lowLevelData) {
-            // This is the most reliable way to capture reverts from the AIVM
-            if (lowLevelData.length > 0) {
-                // If it's a string, attempt to decode it manually
-                if (lowLevelData.length >= 68) {
-                    assembly {
-                        revert(add(32, lowLevelData), mload(lowLevelData))
-                    }
-                }
-            }
-            // Fallback if no data is returned
-            revert("AIVM Coordinator Internal Failure");
-        }
-    catch (e) {
+    } catch (e) {
         const rawData = e.data || (e.info && e.info.error && e.info.error.data);
         console.error("DEBUG - Full Revert Data:", rawData); // Look at this in Vercel logs!
         // Log the full error to Vercel console so you can see it in the dashboard
         console.error("Relayer execution failed:", e);
 
-        let errorMessage = e.reason || e.shortMessage || e.message;
+        let errorMessage = e.reason || e.shortMessage || e.message || "Unknown Error";
 
-        // Ethers v6 often hides the revert data in the 'data' property
-        // or inside 'e.info.error.data' for some providers
+        // Try to decode Ethers revert data
         const revertData = e.data || (e.info && e.info.error && e.info.error.data);
 
-        if (revertData && revertData.startsWith("0x08c379a0")) {
+        if (revertData && typeof revertData === 'string' && revertData.startsWith("0x08c379a0")) {
             try {
                 const iface = new ethers.Interface(["function Error(string)"]);
                 const decoded = iface.decodeFunctionData("Error", revertData);
