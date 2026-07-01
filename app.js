@@ -323,7 +323,7 @@ async function onDrop(source, target) {
     }
     
     try {
-        gameStatus.innerText = "AIVM is thinking... (Gasless Mode)";
+        gameStatus.innerText = "AIVM is thinking...";
         boardConfig.draggable = false; // Lock the board so they can't move twice
         
         // Ping the Relayer. We don't need a blockchain transaction from the user here!
@@ -374,25 +374,32 @@ async function onDrop(source, target) {
         }
 
 async function settleMatch(playerWon, isDraw) {
-    try {
         if (!contract) return;
+        gameStatus.innerText = "Confirming game over...";
         
-        // Optional: show user a confirmation on MetaMask
-        const tx = await contract.completeMatch(
-            userAddress,
-            playerWon,
-            isDraw,
-            game.history().length,
-            game.pgn()
-        );
-        
-        gameStatus.innerText = "Confirming game over on the blockchain...";
-        await tx.wait();
-        console.log("Match settled on-chain!");
+       try {
+        const response = await fetch('/api/settle', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                playerAddress: userAddress,
+                currentFEN: game.fen(),
+                pgn: game.pgn(),
+                historyLength: game.history().length,
+                playerWon: playerWon,
+                isDraw: isDraw
+            })
+        });
 
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || "Failed to settle on backend");
+        }
+
+        console.log("Match settled on-chain! TX:", data.txHash);
         gameStatus.innerText = "Match Settled! Returning to lobby...";
 
-        // Wait 4 seconds to view the final board, then reset UI
         setTimeout(() => {
             document.getElementById('board-container').style.display = 'none';
             document.getElementById('setup-area').style.display = 'block';
@@ -404,7 +411,7 @@ async function settleMatch(playerWon, isDraw) {
                 board = null;
             }
             game.reset();
-            localStorage.removeItem('lcai_chess_pgn'); // clear saved game
+            localStorage.removeItem('lcai_chess_pgn');
         }, 4000);
 
     } catch (error) {
