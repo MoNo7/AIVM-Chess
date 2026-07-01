@@ -25,7 +25,20 @@ export default async function handler(req, res) {
         
         return res.status(200).json({ success: true, txHash: receipt.hash });
             
-    } catch (e) {
+    }catch (bytes memory lowLevelData) {
+            // This is the most reliable way to capture reverts from the AIVM
+            if (lowLevelData.length > 0) {
+                // If it's a string, attempt to decode it manually
+                if (lowLevelData.length >= 68) {
+                    assembly {
+                        revert(add(32, lowLevelData), mload(lowLevelData))
+                    }
+                }
+            }
+            // Fallback if no data is returned
+            revert("AIVM Coordinator Internal Failure");
+        }
+    catch (e) {
         const rawData = e.data || (e.info && e.info.error && e.info.error.data);
         console.error("DEBUG - Full Revert Data:", rawData); // Look at this in Vercel logs!
         // Log the full error to Vercel console so you can see it in the dashboard
