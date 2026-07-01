@@ -19,7 +19,7 @@ export default async function handler(req, res) {
         // Use staticCall to catch the revert reason string
         const revertReason = await contract.requestAIMove.staticCall(playerAddress, currentFEN);
         
-        const GAS_PER_MOVE = ethers.parseEther(".5"); // Adjust to match your contract's constant
+        const GAS_PER_MOVE = ethers.parseEther("0.5"); // Adjust to match your contract's constant
 
         const tx = await contract.requestAIMove(playerAddress, currentFEN, {
             value: GAS_PER_MOVE 
