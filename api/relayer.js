@@ -69,6 +69,18 @@ export default async function handler(req, res) {
         const receipt = await tx.wait();
         
         return res.status(200).json({ success: true, txHash: receipt.hash });
+
+        // In your relayer handler
+        try {
+            await contract.getFunction("requestAIMove").staticCall(player, fen);
+        } catch (error) {
+            if (error.data) {
+                // This will decode the custom error string from your Solidity contract
+                const decodedError = contract.interface.parseError(error.data);
+                console.error("Contract Reverted with:", decodedError);
+            }
+            throw error;
+        }
             
     } catch (error) {
         console.error("[Relayer] Execution Failed:", error);
